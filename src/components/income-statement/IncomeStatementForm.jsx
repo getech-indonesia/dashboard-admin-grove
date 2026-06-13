@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, TrendingUp, Search, X } from 'lucide-react'
 import { useFormStore } from '@/store/useFormStore'
-import { useGetIncomeStatementDetail, useUpdateIncomeStatement } from '@/hooks/useIncomeStatements'
+import {
+  useGetIncomeStatementDetail,
+  useUpdateIncomeStatement,
+  useCreateIncomeStatement
+} from '@/hooks/useIncomeStatements'
 import { useGetCompanies } from '@/hooks/useCompanies'
 
 export default function IncomeStatementForm() {
@@ -13,8 +17,11 @@ export default function IncomeStatementForm() {
   const currentFormData = useFormStore((state) => state.getFormData('income-statements'))
   const updateGlobalStore = useFormStore((state) => state.updateFormData)
 
+  const showToast = useFormStore((state) => state.showToast)
+
+  const createMutation = useCreateIncomeStatement()
   const updateMutation = useUpdateIncomeStatement(id)
-  const { data: serverDetail, isLoading: isLoadingDetail } = useGetIncomeStatementDetail(id)
+  const { data: serverDetail, isLoading: isLoadingDetail, refetch: refetchDetail } = useGetIncomeStatementDetail(id)
 
   const defaultBlueprint = {
     companyId: '',
@@ -106,15 +113,27 @@ export default function IncomeStatementForm() {
     }
   }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    const textFields = ['companyId', 'period', 'periodEndDate', 'currency', 'auditStatus']
+  const formatDisplayNumber = (val) => {
+    if (val === null || val === undefined || val === '') return ''
+    const strVal = val.toString()
+    const parts = strVal.split('.')
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    return parts.join('.')
+  }
 
+  const parseRawNumber = (displayStr) => {
+    const cleanStr = displayStr.replace(/,/g, '')
+    if (cleanStr === '') return ''
+    const parsed = parseFloat(cleanStr)
+    return isNaN(parsed) ? '' : parsed
+  }
+
+  const handleTextChange = (e) => {
+    const { name, value } = e.target
     let updatedValue = value
-    if (!textFields.includes(name) && value !== '') {
-      updatedValue = name === 'fiscalYear' || name === 'fiscalQuarter' ? parseInt(value, 10) : parseFloat(value)
-    } else if (!textFields.includes(name) && value === '') {
-      updatedValue = name === 'fiscalQuarter' ? null : ''
+
+    if (name === 'fiscalYear' || name === 'fiscalQuarter') {
+      updatedValue = value !== '' ? parseInt(value, 10) : ''
     }
 
     let updatedForm = { ...form, [name]: updatedValue }
@@ -127,6 +146,23 @@ export default function IncomeStatementForm() {
       }
     }
 
+    setForm(updatedForm)
+    syncToGlobalStore(updatedForm)
+  }
+
+  const handleNumericChange = (e) => {
+    const { name, value } = e.target
+    const rawNumber = parseRawNumber(value)
+
+    let updatedForm = { ...form, [name]: rawNumber }
+    setForm(updatedForm)
+    syncToGlobalStore(updatedForm)
+  }
+
+  const handlePercentageChange = (e) => {
+    const { name, value } = e.target
+
+    let updatedForm = { ...form, [name]: value }
     setForm(updatedForm)
     syncToGlobalStore(updatedForm)
   }
@@ -146,34 +182,74 @@ export default function IncomeStatementForm() {
 
     if (isEdit) {
       updateMutation.mutate(payload, {
-        onSuccess: () => {
-          updateGlobalStore('income-statements', {})
-          navigate('/dashboard/income-statements')
+        onSuccess: async () => {
+          showToast('Financial ledger items updated successfully.', 'success')
+          await refetchDetail()
         },
         onError: (err) => {
-          alert(`Update failure: ${err.response?.data?.message || err.message}`)
+          showToast(err.response?.data?.message || 'Failed to update financial database registry.', 'error')
+        }
+      })
+    } else {
+      createMutation.mutate(payload, {
+        onSuccess: (data) => {
+          showToast('New income statement registered successfully.', 'success')
+          updateGlobalStore('income-statements', {})
+          setForm(defaultBlueprint)
+          setCompanyQuery('')
+          if (data?.id) {
+            navigate(`/dashboard/income-statements/${data.id}/edit`)
+          }
+        },
+        onError: (err) => {
+          showToast(err.response?.data?.message || 'Failed to initialize statement record.', 'error')
         }
       })
     }
   }
 
-  const renderInputField = (name, label, placeholder = '0.00', isRequired = false) => (
+  const renderFormattedNumberField = (name, label, placeholder = '0.00', isRequired = false) => (
     <div className="space-y-1.5">
       <label className="text-xs font-medium text-zinc-400">
         {label} {isRequired && <span className="text-emerald-500">*</span>}
       </label>
       <input
-        type="number"
-        step="any"
+        type="text"
         name={name}
-        value={form[name] === null || form[name] === undefined ? '' : form[name]}
-        onChange={handleChange}
+        value={formatDisplayNumber(form[name])}
+        onChange={handleNumericChange}
         required={isRequired}
         className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 placeholder-zinc-700 text-xs focus:outline-none focus:border-zinc-700 transition-colors font-mono"
         placeholder={placeholder}
       />
     </div>
   )
+
+  const renderPercentageField = (name, label, placeholder = '0.00') => {
+    const rawValue = form[name]
+    const displayValue = rawValue !== null && rawValue !== undefined ? rawValue.toString() : ''
+
+    return (
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-zinc-400">
+          {label}
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            name={name}
+            value={displayValue}
+            onChange={handlePercentageChange}
+            className="w-full pl-3 pr-8 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 placeholder-zinc-700 text-xs focus:outline-none focus:border-zinc-700 transition-colors font-mono"
+            placeholder={placeholder}
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-zinc-500 font-mono text-xs">
+            %
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (isEdit && isLoadingDetail) {
     return (
@@ -270,7 +346,7 @@ export default function IncomeStatementForm() {
               <select
                 name="period"
                 value={form.period || 'ANNUAL'}
-                onChange={handleChange}
+                onChange={handleTextChange}
                 className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-zinc-700 transition-colors appearance-none"
               >
                 <option value="ANNUAL">ANNUAL</option>
@@ -288,7 +364,7 @@ export default function IncomeStatementForm() {
                 type="number"
                 name="fiscalYear"
                 value={form.fiscalYear === null || form.fiscalYear === undefined ? '' : form.fiscalYear}
-                onChange={handleChange}
+                onChange={handleTextChange}
                 required
                 className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 placeholder-zinc-700 text-xs focus:outline-none focus:border-zinc-700 transition-colors font-mono"
                 placeholder="2026"
@@ -301,9 +377,9 @@ export default function IncomeStatementForm() {
                 type="date"
                 name="periodEndDate"
                 value={form.periodEndDate || ''}
-                onChange={handleChange}
+                onChange={handleTextChange}
                 required
-                className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-300 text-xs focus:outline-none focus:border-zinc-700 transition-colors font-mono"
+                className="w-full h-[34px] px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-300 text-xs focus:outline-none focus:border-zinc-700 transition-colors font-mono block box-border leading-none"
               />
             </div>
 
@@ -313,7 +389,7 @@ export default function IncomeStatementForm() {
                 <select
                   name="currency"
                   value={form.currency || 'USD'}
-                  onChange={handleChange}
+                  onChange={handleTextChange}
                   required
                   className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-zinc-700 transition-colors appearance-none font-mono"
                 >
@@ -336,7 +412,7 @@ export default function IncomeStatementForm() {
               <select
                 name="auditStatus"
                 value={form.auditStatus || 'UNAUDITED'}
-                onChange={handleChange}
+                onChange={handleTextChange}
                 className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-zinc-700 transition-colors appearance-none"
               >
                 <option value="UNAUDITED">UNAUDITED</option>
@@ -355,54 +431,54 @@ export default function IncomeStatementForm() {
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">Top-Line Performance</div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {renderInputField('revenue', 'Total Revenue', '0.00', true)}
-            {renderInputField('revenueGrowthYoY', 'Revenue Growth YoY', '0.0450')}
-            {renderInputField('cogs', 'Cost of Goods Sold (COGS)')}
-            {renderInputField('grossProfit', 'Gross Profit')}
+            {renderFormattedNumberField('revenue', 'Total Revenue', '0.00', true)}
+            {renderPercentageField('revenueGrowthYoY', 'Revenue Growth YoY', '4.50')}
+            {renderFormattedNumberField('cogs', 'Cost of Goods Sold (COGS)')}
+            {renderFormattedNumberField('grossProfit', 'Gross Profit')}
           </div>
         </div>
 
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">Operating Expenses (OpEx)</div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {renderInputField('operatingExpenses', 'Total OpEx')}
-            {renderInputField('sellingExpenses', 'Selling Expenses')}
-            {renderInputField('generalAdminExpenses', 'Gen & Admin Expenses')}
-            {renderInputField('rdExpenses', 'R&D Expenditures')}
-            {renderInputField('depreciationAmort', 'Depr & Amortization')}
+            {renderFormattedNumberField('operatingExpenses', 'Total OpEx')}
+            {renderFormattedNumberField('sellingExpenses', 'Selling Expenses')}
+            {renderFormattedNumberField('generalAdminExpenses', 'Gen & Admin Expenses')}
+            {renderFormattedNumberField('rdExpenses', 'R&D Expenditures')}
+            {renderFormattedNumberField('depreciationAmort', 'Depr & Amortization')}
           </div>
         </div>
 
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">Profitability Intermediaries</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {renderInputField('operatingIncome', 'Operating Income')}
-            {renderInputField('ebit', 'EBIT (Operating Earnings)')}
-            {renderInputField('ebitda', 'EBITDA')}
+            {renderFormattedNumberField('operatingIncome', 'Operating Income')}
+            {renderFormattedNumberField('ebit', 'EBIT (Operating Earnings)')}
+            {renderFormattedNumberField('ebitda', 'EBITDA')}
           </div>
         </div>
 
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">Non-Operating & Financial Taxes</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {renderInputField('interestExpense', 'Interest Expense')}
-            {renderInputField('interestIncome', 'Interest Income')}
-            {renderInputField('otherNonOperatingIncome', 'Other Non-Operating')}
-            {renderInputField('pretaxIncome', 'Pretax Income')}
-            {renderInputField('incomeTaxExpense', 'Income Tax Expense')}
-            {renderInputField('effectiveTaxRate', 'Effective Tax Rate', '0.2100')}
+            {renderFormattedNumberField('interestExpense', 'Interest Expense')}
+            {renderFormattedNumberField('interestIncome', 'Interest Income')}
+            {renderFormattedNumberField('otherNonOperatingIncome', 'Other Non-Operating')}
+            {renderFormattedNumberField('pretaxIncome', 'Pretax Income')}
+            {renderFormattedNumberField('incomeTaxExpense', 'Income Tax Expense')}
+            {renderPercentageField('effectiveTaxRate', 'Effective Tax Rate', '21.00')}
           </div>
         </div>
 
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
-          <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900 ">Bottom Line Earnings & Per Share Data</div>
+          <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">Bottom Line Earnings & Per Share Data</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {renderInputField('netIncome', 'Net Income', '0.00', true)}
-            {renderInputField('netIncomeAttributable', 'Net Income Attributable')}
-            {renderInputField('minorityInterest', 'Minority Interest')}
-            {renderInputField('eps', 'Basic EPS (Earnings Per Share)', '0.0000')}
-            {renderInputField('epsDiluted', 'Diluted EPS', '0.0000')}
-            {renderInputField('sharesWeightedAvg', 'Weighted Avg Shares', '10000000')}
+            {renderFormattedNumberField('netIncome', 'Net Income', '0.00', true)}
+            {renderFormattedNumberField('netIncomeAttributable', 'Net Income Attributable')}
+            {renderFormattedNumberField('minorityInterest', 'Minority Interest')}
+            {renderFormattedNumberField('eps', 'Basic EPS (Earnings Per Share)', '0.0000')}
+            {renderFormattedNumberField('epsDiluted', 'Diluted EPS', '0.0000')}
+            {renderFormattedNumberField('sharesWeightedAvg', 'Weighted Avg Shares', '10000000')}
           </div>
         </div>
 
@@ -416,11 +492,11 @@ export default function IncomeStatementForm() {
           </button>
           <button
             type="submit"
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || createMutation.isPending}
             className="flex items-center gap-1.5 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 disabled:opacity-40 text-zinc-950 font-semibold text-xs rounded-lg transition-colors shadow-sm"
           >
             <Save className="w-3.5 h-3.5 stroke-[2.5]" />
-            {updateMutation.isPending ? 'Updating...' : 'Save Statement'}
+            {updateMutation.isPending || createMutation.isPending ? 'Saving...' : 'Save Statement'}
           </button>
         </div>
 

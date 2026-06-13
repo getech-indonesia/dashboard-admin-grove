@@ -2,14 +2,12 @@ import { create } from 'zustand'
 import { formBlueprints } from '../types/formBlueprints'
 
 export const useFormStore = create((set, get) => ({
-    // State data utama untuk masing-masing modul form
     companyData: {},
     listingData: {},
     incomeStatementData: {},
     balanceSheetData: {},
     cashFlowData: {},
 
-    // Mengambil data berdasarkan kunci form yang aktif saat ini
     getFormData: (formKey) => {
         if (!formKey) return {}
         if (formKey === 'companies') return get().companyData
@@ -20,7 +18,6 @@ export const useFormStore = create((set, get) => ({
         return {}
     },
 
-    // Aksi untuk memperbarui data (Mendukung Objek tunggal maupun Array secara otomatis)
     updateFormData: (formKey, newData) => {
         const stateKey =
             formKey === 'companies' ? 'companyData' :
@@ -34,7 +31,6 @@ export const useFormStore = create((set, get) => ({
         }
     },
 
-    // Aksi Tombol "Add Item" (Array Handler)
     addArrayItem: (formKey) => {
         const currentData = get().getFormData(formKey)
         const blueprint = formBlueprints[formKey]
@@ -48,7 +44,6 @@ export const useFormStore = create((set, get) => ({
         }
     },
 
-    // Aksi Tombol "Pop/Remove Last Item" (Array Handler)
     removeLastArrayItem: (formKey) => {
         const currentData = get().getFormData(formKey)
         if (!Array.isArray(currentData)) return
@@ -58,5 +53,13 @@ export const useFormStore = create((set, get) => ({
         } else {
             get().updateFormData(formKey, currentData.slice(0, -1))
         }
-    }
+    },
+
+    toast: null,
+
+    showToast: (message, type = 'success') => set({
+        toast: { message, type }
+    }),
+
+    hideToast: () => set({ toast: null })
 }))

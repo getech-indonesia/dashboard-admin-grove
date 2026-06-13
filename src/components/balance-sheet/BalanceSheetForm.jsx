@@ -1,29 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, Wallet, Search } from 'lucide-react'
-import { useFormStore } from '@/store/useFormStore'
-import { formatCurrency } from '@/utils/formatters'
 
-export default function BalanceSheetForm() {
+export default function BalanceSheetForm({ formData, setFormData }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = !!id
 
-  // 1. KONSUMSI GLOBAL STORE ZUSTAND
-  const currentFormData = useFormStore((state) => state.getFormData('balance-sheets'))
-  const updateGlobalStore = useFormStore((state) => state.updateFormData)
-
-  // Master data tiruan untuk relasi Company Connect
   const mockCompanies = [
     { id: 'c1-uuid-apple', displayName: 'Apple Inc.', symbol: 'AAPL' },
     { id: 'c2-uuid-msft', displayName: 'Microsoft Corp.', symbol: 'MSFT' },
     { id: 'c3-uuid-bbca', displayName: 'Bank Central Asia Tbk.', symbol: 'BBCA' }
   ]
 
-  const defaultBlueprint = {
+  const [form, setForm] = useState({
     companyId: '',
     period: 'ANNUAL',
-    fiscalYear: new Date().getFullYear(),
+    fiscalYear: '',
     fiscalQuarter: null,
     periodEndDate: '',
     currency: 'USD',
@@ -61,49 +54,27 @@ export default function BalanceSheetForm() {
     bookValuePerShare: '',
     netDebt: '',
     workingCapital: ''
-  }
+  })
 
-  const [form, setForm] = useState(defaultBlueprint)
   const [companyQuery, setCompanyQuery] = useState('')
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
 
-  // 2. SINKRONISASI SEARAH DARI ZUSTAND GLOBAL KE STATE FORM LOKAL (ARRAY & OBJECT SUPPORT)
   useEffect(() => {
-    if (currentFormData) {
-      // Ambil elemen pertama index [0] jika editor eksternal dalam format Array bulk
-      const targetData = Array.isArray(currentFormData) ? currentFormData[0] : currentFormData
+    if (formData && Object.keys(formData).length > 0) {
+      const currentFormStr = JSON.stringify(form)
+      const incomingDataStr = JSON.stringify({ ...form, ...formData })
 
-      if (targetData && Object.keys(targetData).length > 0) {
-        const currentFormStr = JSON.stringify(form)
-        const incomingDataStr = JSON.stringify({ ...form, ...targetData })
-
-        if (currentFormStr !== incomingDataStr) {
-          setForm(prev => {
-            const updated = { ...prev, ...targetData }
-            const matched = mockCompanies.find(c => c.id === updated.companyId)
-            if (matched) setCompanyQuery(matched.displayName)
-            return updated
-          })
-        }
-      } else if (targetData && Object.keys(targetData).length === 0) {
-        setForm(defaultBlueprint)
-        setCompanyQuery('')
+      if (currentFormStr !== incomingDataStr) {
+        setForm(prev => {
+          const updated = { ...prev, ...formData }
+          const matched = mockCompanies.find(c => c.id === updated.companyId)
+          if (matched) setCompanyQuery(matched.displayName)
+          return updated
+        })
       }
     }
-  }, [currentFormData])
+  }, [formData])
 
-  // Helper untuk sinkronisasi state lokal balik ke Zustand global secara aman
-  const syncToGlobalStore = (updatedForm) => {
-    if (Array.isArray(currentFormData)) {
-      const updatedArray = [...currentFormData]
-      updatedArray[0] = updatedForm // Update index 0, biarkan elemen array lainnya tetap aman
-      updateGlobalStore('balance-sheets', updatedArray)
-    } else {
-      updateGlobalStore('balance-sheets', updatedForm)
-    }
-  }
-
-  // 3. LOGIKA HANDLE INPUT CHANGE & AUTOMATION
   const handleChange = (e) => {
     const { name, value } = e.target
     const textFields = ['companyId', 'period', 'periodEndDate', 'currency', 'auditStatus']
@@ -115,27 +86,26 @@ export default function BalanceSheetForm() {
       updatedValue = name === 'fiscalQuarter' ? null : ''
     }
 
-    let updatedForm = { ...form, [name]: updatedValue }
+    let newForm = { ...form, [name]: updatedValue }
 
-    // Otomatisasi kuartal berdasarkan Enum PeriodType
     if (name === 'period') {
       if (value.startsWith('Q')) {
-        updatedForm.fiscalQuarter = parseInt(value.charAt(1), 10)
+        newForm.fiscalQuarter = parseInt(value.charAt(1), 10)
       } else {
-        updatedForm.fiscalQuarter = null
+        newForm.fiscalQuarter = null
       }
     }
 
-    setForm(updatedForm)
-    syncToGlobalStore(updatedForm)
+    setForm(newForm)
+    setFormData(newForm)
   }
 
   const handleSelectCompany = (company) => {
-    const updatedForm = { ...form, companyId: company.id }
-    setForm(updatedForm)
+    const newForm = { ...form, companyId: company.id }
+    setForm(newForm)
+    setFormData(newForm)
     setCompanyQuery(company.displayName)
     setShowCompanyDropdown(false)
-    syncToGlobalStore(updatedForm)
   }
 
   const filteredCompanies = mockCompanies.filter(c =>
@@ -145,7 +115,7 @@ export default function BalanceSheetForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log('Safe Balance Sheet Payload:', currentFormData)
+    console.log('Safe Balance Sheet Payload:', form)
   }
 
   const renderInputField = (name, label, placeholder = '0.00', isRequired = false) => (
@@ -157,7 +127,7 @@ export default function BalanceSheetForm() {
         type="number"
         step="any"
         name={name}
-        value={form[name] === null || form[name] === undefined ? '' : form[name]}
+        value={form[name] === null ? '' : form[name]}
         onChange={handleChange}
         required={isRequired}
         className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 placeholder-zinc-700 text-xs focus:outline-none focus:border-zinc-700 transition-colors font-mono"
@@ -169,7 +139,6 @@ export default function BalanceSheetForm() {
   return (
     <div className="max-w-[1100px] mx-auto space-y-6 animate-fade-in text-sm text-zinc-300 pb-12">
 
-      {/* HEADER SECTION */}
       <div className="flex items-center gap-4 border-b border-zinc-900 pb-5">
         <button
           type="button"
@@ -190,7 +159,6 @@ export default function BalanceSheetForm() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
-        {/* BLOCK 1: CONTEXT & TIMING */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-5">
           <div className="flex items-center gap-2 pb-3 border-b border-zinc-900">
             <Wallet className="w-4 h-4 text-emerald-500" />
@@ -198,7 +166,6 @@ export default function BalanceSheetForm() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Searchable Dropdown: Connected Company */}
             <div className="space-y-1.5 relative">
               <label className="text-xs font-medium text-zinc-400">
                 Connected Company <span className="text-emerald-500">*</span>
@@ -238,12 +205,11 @@ export default function BalanceSheetForm() {
               )}
             </div>
 
-            {/* Period Selection */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Reporting Period Type</label>
               <select
                 name="period"
-                value={form.period || 'ANNUAL'}
+                value={form.period}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-zinc-700 transition-colors appearance-none"
               >
@@ -256,13 +222,12 @@ export default function BalanceSheetForm() {
               </select>
             </div>
 
-            {/* Fiscal Year */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Fiscal Calendar Year</label>
               <input
                 type="number"
                 name="fiscalYear"
-                value={form.fiscalYear === null || form.fiscalYear === undefined ? '' : form.fiscalYear}
+                value={form.fiscalYear}
                 onChange={handleChange}
                 required
                 className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 placeholder-zinc-700 text-xs focus:outline-none focus:border-zinc-700 transition-colors font-mono"
@@ -270,26 +235,24 @@ export default function BalanceSheetForm() {
               />
             </div>
 
-            {/* Period End Date */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Period End Date</label>
               <input
                 type="date"
                 name="periodEndDate"
-                value={form.periodEndDate || ''}
+                value={form.periodEndDate}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-300 text-zinc-300 text-xs focus:outline-none focus:border-zinc-700 transition-colors font-mono"
+                className="w-full h-[34px] px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-zinc-700 transition-colors font-mono block box-border leading-none"
               />
             </div>
 
-            {/* Reporting Currency Dropdown Select */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Reporting Currency</label>
               <div className="relative">
                 <select
                   name="currency"
-                  value={form.currency || 'USD'}
+                  value={form.currency}
                   onChange={handleChange}
                   required
                   className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-zinc-700 transition-colors appearance-none font-mono"
@@ -308,12 +271,11 @@ export default function BalanceSheetForm() {
               </div>
             </div>
 
-            {/* Audit Status */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Audit Status</label>
               <select
                 name="auditStatus"
-                value={form.auditStatus || 'UNAUDITED'}
+                value={form.auditStatus}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-zinc-700 transition-colors appearance-none"
               >
@@ -330,7 +292,6 @@ export default function BalanceSheetForm() {
           )}
         </div>
 
-        {/* BLOCK 2: CURRENT ASSETS */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">1. Current Assets</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -343,7 +304,6 @@ export default function BalanceSheetForm() {
           </div>
         </div>
 
-        {/* BLOCK 3: NON-CURRENT ASSETS & TOTAL ASSETS */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">2. Non-Current Assets</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -359,7 +319,6 @@ export default function BalanceSheetForm() {
           </div>
         </div>
 
-        {/* BLOCK 4: CURRENT LIABILITIES */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">3. Current Liabilities</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -373,7 +332,6 @@ export default function BalanceSheetForm() {
           </div>
         </div>
 
-        {/* BLOCK 5: NON-CURRENT LIABILITIES & TOTAL LIABILITIES */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">4. Non-Current Liabilities</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -385,7 +343,6 @@ export default function BalanceSheetForm() {
           </div>
         </div>
 
-        {/* BLOCK 6: SHAREHOLDER EQUITY MAP */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider pb-2 border-b border-zinc-900">5. Shareholder Equity (E)</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -401,7 +358,6 @@ export default function BalanceSheetForm() {
           </div>
         </div>
 
-        {/* BLOCK 7: DERIVED METRICS */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pb-2 border-b border-zinc-900">6. Derived System Performance Metrics</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -411,7 +367,6 @@ export default function BalanceSheetForm() {
           </div>
         </div>
 
-        {/* FOOTER ACTIONS CONTROLLER */}
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
@@ -432,7 +387,6 @@ export default function BalanceSheetForm() {
 
       </form>
 
-      {/* Dropdown overlay click shield */}
       {showCompanyDropdown && (
         <div className="fixed inset-0 z-0" onClick={() => setShowCompanyDropdown(false)} />
       )}

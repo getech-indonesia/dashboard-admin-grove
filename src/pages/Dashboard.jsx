@@ -3,6 +3,8 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import {
   Building2, List, TrendingUp, Wallet, DollarSign, BarChart3, LogOut, Menu, X, Code2
 } from 'lucide-react'
+import Toast from '@/components/dashboard/Toast'
+import { useFormStore } from '@/store/useFormStore'
 
 // Import Sub-Komponen Modular JSON Editor Sidebar yang baru
 import JsonEditorSidebar from '../components/dashboard/JsonEditorSidebar'
@@ -24,6 +26,8 @@ export default function Dashboard() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [jsonFormVisible, setJsonFormVisible] = useState(false)
+  const toast = useFormStore((state) => state.toast)
+  const hideToast = useFormStore((state) => state.hideToast)
 
   // Menentukan apakah halaman saat ini adalah halaman formulir (Create/Edit)
   const isFormPage = [
@@ -116,8 +120,8 @@ export default function Dashboard() {
               <button
                 onClick={() => setJsonFormVisible(!jsonFormVisible)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${jsonFormVisible
-                    ? 'bg-zinc-900 border-zinc-800 text-emerald-400 shadow-sm'
-                    : 'bg-zinc-900/50 border-zinc-900 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+                  ? 'bg-zinc-900 border-zinc-800 text-emerald-400 shadow-sm'
+                  : 'bg-zinc-900/50 border-zinc-900 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
                   }`}
               >
                 <Code2 className="w-3.5 h-3.5" />
@@ -167,6 +171,13 @@ export default function Dashboard() {
         </div>
 
       </div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
+        />
+      )}
     </div>
   )
 }
