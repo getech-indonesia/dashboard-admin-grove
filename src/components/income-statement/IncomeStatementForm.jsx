@@ -1,23 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Save, TrendingUp, Search, DollarSign } from 'lucide-react'
+import { ArrowLeft, Save, TrendingUp, Search, X } from 'lucide-react'
 import { useFormStore } from '@/store/useFormStore'
+import { useGetIncomeStatementDetail, useUpdateIncomeStatement } from '@/hooks/useIncomeStatements'
+import { useGetCompanies } from '@/hooks/useCompanies'
 
 export default function IncomeStatementForm() {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = !!id
 
-  // 1. KONSUMSI GLOBAL STORE ZUSTAND
   const currentFormData = useFormStore((state) => state.getFormData('income-statements'))
   const updateGlobalStore = useFormStore((state) => state.updateFormData)
 
-  // Data master tiruan untuk pencarian entitas relasional
-  const mockCompanies = [
-    { id: 'c1-uuid-apple', displayName: 'Apple Inc.', symbol: 'AAPL' },
-    { id: 'c2-uuid-msft', displayName: 'Microsoft Corp.', symbol: 'MSFT' },
-    { id: 'c3-uuid-bbca', displayName: 'Bank Central Asia Tbk.', symbol: 'BBCA' }
-  ]
+  const updateMutation = useUpdateIncomeStatement(id)
+  const { data: serverDetail, isLoading: isLoadingDetail } = useGetIncomeStatementDetail(id)
 
   const defaultBlueprint = {
     companyId: '',
@@ -55,33 +52,50 @@ export default function IncomeStatementForm() {
 
   const [form, setForm] = useState(defaultBlueprint)
   const [companyQuery, setCompanyQuery] = useState('')
+  const [debouncedCompanyQuery, setDebouncedCompanyQuery] = useState('')
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
 
-  // 2. SINKRONISASI SEARAH DARI ZUSTAND GLOBAL KE STATE FORM LOKAL (ARRAY & OBJECT SUPPORT)
+  const { data: searchResults, isLoading: isSearchingCompanies } = useGetCompanies(1, 10, debouncedCompanyQuery)
+  const companyOptions = searchResults?.items || []
+
   useEffect(() => {
-    if (currentFormData) {
+    if (isEdit && serverDetail) {
+      const cleanDetail = { ...serverDetail }
+      delete cleanDetail.id
+      delete cleanDetail.createdAt
+      delete cleanDetail.updatedAt
+
+      if (cleanDetail.company) {
+        setCompanyQuery(cleanDetail.company.displayName)
+        cleanDetail.companyId = cleanDetail.company.id
+        delete cleanDetail.company
+      }
+
+      if (cleanDetail.periodEndDate) {
+        cleanDetail.periodEndDate = cleanDetail.periodEndDate.split('T')[0]
+      }
+
+      setForm(cleanDetail)
+      updateGlobalStore('income-statements', cleanDetail)
+    }
+  }, [isEdit, serverDetail])
+
+  useEffect(() => {
+    if (!isEdit && currentFormData) {
       const targetData = Array.isArray(currentFormData) ? currentFormData[0] : currentFormData
-
       if (targetData && Object.keys(targetData).length > 0) {
-        const currentFormStr = JSON.stringify(form)
-        const incomingDataStr = JSON.stringify({ ...form, ...targetData })
-
-        if (currentFormStr !== incomingDataStr) {
-          setForm(prev => {
-            const updated = { ...prev, ...targetData }
-            const matched = mockCompanies.find(c => c.id === updated.companyId)
-            if (matched) setCompanyQuery(matched.displayName)
-            return updated
-          })
-        }
-      } else if (targetData && Object.keys(targetData).length === 0) {
-        setForm(defaultBlueprint)
-        setCompanyQuery('')
+        setForm(prev => ({ ...prev, ...targetData }))
       }
     }
-  }, [currentFormData])
+  }, [currentFormData, isEdit])
 
-  // Helper untuk sinkronisasi state lokal balik ke Zustand global secara aman
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedCompanyQuery(companyQuery)
+    }, 400)
+    return () => clearTimeout(handler)
+  }, [companyQuery])
+
   const syncToGlobalStore = (updatedForm) => {
     if (Array.isArray(currentFormData)) {
       const updatedArray = [...currentFormData]
@@ -92,7 +106,6 @@ export default function IncomeStatementForm() {
     }
   }
 
-  // 3. LOGIKA HANDLE INPUT CHANGE & AUTOMATION
   const handleChange = (e) => {
     const { name, value } = e.target
     const textFields = ['companyId', 'period', 'periodEndDate', 'currency', 'auditStatus']
@@ -106,7 +119,6 @@ export default function IncomeStatementForm() {
 
     let updatedForm = { ...form, [name]: updatedValue }
 
-    // Otomatisasi kuartal berdasarkan Enum PeriodType
     if (name === 'period') {
       if (value.startsWith('Q')) {
         updatedForm.fiscalQuarter = parseInt(value.charAt(1), 10)
@@ -127,14 +139,22 @@ export default function IncomeStatementForm() {
     syncToGlobalStore(updatedForm)
   }
 
-  const filteredCompanies = mockCompanies.filter(c =>
-    c.displayName.toLowerCase().includes(companyQuery.toLowerCase()) ||
-    c.symbol.toLowerCase().includes(companyQuery.toLowerCase())
-  )
-
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log('Submitted Store Payload:', currentFormData)
+
+    const payload = Array.isArray(currentFormData) ? currentFormData[0] : currentFormData
+
+    if (isEdit) {
+      updateMutation.mutate(payload, {
+        onSuccess: () => {
+          updateGlobalStore('income-statements', {})
+          navigate('/dashboard/income-statements')
+        },
+        onError: (err) => {
+          alert(`Update failure: ${err.response?.data?.message || err.message}`)
+        }
+      })
+    }
   }
 
   const renderInputField = (name, label, placeholder = '0.00', isRequired = false) => (
@@ -155,10 +175,17 @@ export default function IncomeStatementForm() {
     </div>
   )
 
+  if (isEdit && isLoadingDetail) {
+    return (
+      <div className="h-48 border border-zinc-900 bg-[#09090b] rounded-xl flex items-center justify-center text-xs text-zinc-500 font-mono animate-pulse">
+        Retrieving operational ledger item maps from server registry...
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-[1100px] mx-auto space-y-6 animate-fade-in text-sm text-zinc-300 pb-12">
 
-      {/* HEADER SECTION */}
       <div className="flex items-center gap-4 border-b border-zinc-900 pb-5">
         <button
           type="button"
@@ -179,7 +206,6 @@ export default function IncomeStatementForm() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
-        {/* BLOCK 1: STATEMENT CONTEXT */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-5">
           <div className="flex items-center gap-2 pb-3 border-b border-zinc-900">
             <TrendingUp className="w-4 h-4 text-emerald-500" />
@@ -187,7 +213,6 @@ export default function IncomeStatementForm() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Searchable Dropdown: Company Connect */}
             <div className="space-y-1.5 relative">
               <label className="text-xs font-medium text-zinc-400">
                 Connected Company <span className="text-emerald-500">*</span>
@@ -201,23 +226,36 @@ export default function IncomeStatementForm() {
                     setShowCompanyDropdown(true)
                   }}
                   onFocus={() => setShowCompanyDropdown(true)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 placeholder-zinc-600 text-xs focus:outline-none focus:border-zinc-700 transition-colors"
+                  className="w-full pl-9 pr-8 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 placeholder-zinc-600 text-xs focus:outline-none focus:border-zinc-700 transition-colors"
                   placeholder="Search corporate target..."
                 />
                 <Search className="w-3.5 h-3.5 text-zinc-600 absolute left-3 top-2.5" />
+                {companyQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setCompanyQuery(''); setForm(prev => ({ ...prev, companyId: '' })) }}
+                    className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
               </div>
 
-              {showCompanyDropdown && (
+              {showCompanyDropdown && companyQuery && (
                 <div className="absolute z-10 w-full mt-1 bg-[#0c0c0e] border border-zinc-800 rounded-lg max-h-40 overflow-y-auto shadow-xl divide-y divide-zinc-900">
-                  {filteredCompanies.length > 0 ? (
-                    filteredCompanies.map(c => (
+                  {isSearchingCompanies ? (
+                    <div className="px-3 py-2 text-xs text-zinc-600 font-mono animate-pulse">Searching ledger...</div>
+                  ) : companyOptions.length > 0 ? (
+                    companyOptions.map(c => (
                       <div
                         key={c.id}
                         onClick={() => handleSelectCompany(c)}
                         className="px-3 py-2 text-xs hover:bg-zinc-900 text-zinc-400 hover:text-zinc-100 cursor-pointer flex justify-between items-center"
                       >
                         <span>{c.displayName}</span>
-                        <span className="font-mono text-[10px] text-zinc-600 bg-zinc-950 px-1 rounded">{c.symbol}</span>
+                        {c.listings?.[0]?.symbol && (
+                          <span className="font-mono text-[10px] text-zinc-600 bg-zinc-950 px-1 rounded">{c.listings[0].symbol}</span>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -227,7 +265,6 @@ export default function IncomeStatementForm() {
               )}
             </div>
 
-            {/* Period Select */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Filing Period Type</label>
               <select
@@ -237,15 +274,14 @@ export default function IncomeStatementForm() {
                 className="w-full px-3 py-2 bg-[#0c0c0e] border border-zinc-900 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-zinc-700 transition-colors appearance-none"
               >
                 <option value="ANNUAL">ANNUAL</option>
-                <option value="Q1">Q1 (Quarter 1)</option>
-                <option value="Q2">Q2 (Quarter 2)</option>
-                <option value="Q3">Q3 (Quarter 3)</option>
-                <option value="Q4">Q4 (Quarter 4)</option>
-                <option value="TTM">TTM (Trailing 12M)</option>
+                <option value="Q1">Q1</option>
+                <option value="Q2">Q2</option>
+                <option value="Q3">Q3</option>
+                <option value="Q4">Q4</option>
+                <option value="TTM">TTM</option>
               </select>
             </div>
 
-            {/* Fiscal Year */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Fiscal Calendar Year</label>
               <input
@@ -259,7 +295,6 @@ export default function IncomeStatementForm() {
               />
             </div>
 
-            {/* Period End Date */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Period Closing Date</label>
               <input
@@ -272,11 +307,8 @@ export default function IncomeStatementForm() {
               />
             </div>
 
-            {/* Reporting Currency */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400">
-                Reporting Currency <span className="text-emerald-500">*</span>
-              </label>
+              <label className="text-xs font-medium text-zinc-400">Reporting Currency *</label>
               <div className="relative">
                 <select
                   name="currency"
@@ -299,7 +331,6 @@ export default function IncomeStatementForm() {
               </div>
             </div>
 
-            {/* Audit Status */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Filing Audit Status</label>
               <select
@@ -310,7 +341,7 @@ export default function IncomeStatementForm() {
               >
                 <option value="UNAUDITED">UNAUDITED</option>
                 <option value="AUDITED">AUDITED</option>
-                <option value="RESTATED">RESTATED</option>
+                <option value="REVIEWED">REVIEWED</option>
               </select>
             </div>
           </div>
@@ -321,11 +352,8 @@ export default function IncomeStatementForm() {
           )}
         </div>
 
-        {/* BLOCK 2: TOP LINE REVENUE & COGS */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
-          <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900 flex items-center gap-2">
-            <DollarSign className="w-3.5 h-3.5 text-zinc-500" /> Top-Line Performance
-          </div>
+          <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">Top-Line Performance</div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {renderInputField('revenue', 'Total Revenue', '0.00', true)}
             {renderInputField('revenueGrowthYoY', 'Revenue Growth YoY', '0.0450')}
@@ -334,7 +362,6 @@ export default function IncomeStatementForm() {
           </div>
         </div>
 
-        {/* BLOCK 3: OPERATING EXPENDITURES */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">Operating Expenses (OpEx)</div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -346,7 +373,6 @@ export default function IncomeStatementForm() {
           </div>
         </div>
 
-        {/* BLOCK 4: OPERATING INCOME & EBIT/EBITDA */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">Profitability Intermediaries</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -356,7 +382,6 @@ export default function IncomeStatementForm() {
           </div>
         </div>
 
-        {/* BLOCK 5: BELOW THE LINE METRICS */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900">Non-Operating & Financial Taxes</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -369,7 +394,6 @@ export default function IncomeStatementForm() {
           </div>
         </div>
 
-        {/* BLOCK 6: BOTTOM LINE & CAPITAL PER SHARE */}
         <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-4">
           <div className="text-xs font-semibold text-zinc-200 uppercase tracking-wider pb-2 border-b border-zinc-900 ">Bottom Line Earnings & Per Share Data</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -382,7 +406,6 @@ export default function IncomeStatementForm() {
           </div>
         </div>
 
-        {/* FOOTER CONTROLLER ACTIONS */}
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
@@ -391,19 +414,18 @@ export default function IncomeStatementForm() {
           >
             Cancel
           </button>
-
           <button
             type="submit"
-            className="flex items-center gap-1.5 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-semibold text-xs rounded-lg transition-colors shadow-sm"
+            disabled={updateMutation.isPending}
+            className="flex items-center gap-1.5 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 disabled:opacity-40 text-zinc-950 font-semibold text-xs rounded-lg transition-colors shadow-sm"
           >
             <Save className="w-3.5 h-3.5 stroke-[2.5]" />
-            Save Statement
+            {updateMutation.isPending ? 'Updating...' : 'Save Statement'}
           </button>
         </div>
 
       </form>
 
-      {/* Backdrop overlay click shield */}
       {showCompanyDropdown && (
         <div className="fixed inset-0 z-0" onClick={() => setShowCompanyDropdown(false)} />
       )}

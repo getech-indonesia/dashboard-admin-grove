@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosClient from '../api/axiosClient'
 
 // Hook untuk mengambil data list income statements beserta pagination dari server
@@ -19,6 +19,19 @@ export function useGetIncomeStatements(page = 1, pageSize = 20, keyword = '', pe
         },
         placeholderData: (previousData) => previousData, // Anti-flicker UI saat ganti filter
         staleTime: 5 * 60 * 1000,
+    })
+}
+
+export function useUpdateIncomeStatement(id) {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async (payload) => {
+            const response = await axiosClient.patch(`/admin/income-statements/${id}`, payload)
+            return response.data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-income-statements'] })
+        },
     })
 }
 

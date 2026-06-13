@@ -2,21 +2,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosClient from '../api/axiosClient'
 
 // Hook untuk Fetch Data List (GET)
-export function useGetCompanies(page = 1, pageSize = 20) {
+export function useGetCompanies(page = 1, pageSize = 20, keyword = '') {
     return useQuery({
-        // Masukkan page dan pageSize ke queryKey agar TanStack Query mendeteksi pergantian halaman
-        queryKey: ['admin-companies', page, pageSize],
+        queryKey: ['admin-companies', page, pageSize, keyword],
         queryFn: async () => {
             const response = await axiosClient.get('/admin/companies', {
                 params: {
                     page,
                     pageSize,
+                    keyword: keyword || undefined,
                 },
             })
-            return response.data // Mengembalikan total objek sesuai contoh response Anda ({ items: [], pagination: {} })
+            return response.data
         },
-        placeholderData: (previousData) => previousData, // Pengaman agar UI tidak berkedip (flicker) saat berpindah halaman
-        staleTime: 5 * 60 * 1000, // Cache aman selama 5 menit
+        placeholderData: (previousData) => previousData,
+        staleTime: 5 * 60 * 1000,
     })
 }
 
