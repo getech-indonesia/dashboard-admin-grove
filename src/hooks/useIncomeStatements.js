@@ -1,0 +1,35 @@
+import { useQuery } from '@tanstack/react-query'
+import axiosClient from '../api/axiosClient'
+
+// Hook untuk mengambil data list income statements beserta pagination dari server
+export function useGetIncomeStatements(page = 1, pageSize = 20, keyword = '', period = '') {
+    return useQuery({
+        // Masukkan period ke queryKey agar data cache terisolasi secara presisi
+        queryKey: ['admin-income-statements', page, pageSize, keyword, period],
+        queryFn: async () => {
+            const response = await axiosClient.get('/admin/income-statements', {
+                params: {
+                    page,
+                    pageSize,
+                    keyword: keyword || undefined,
+                    period: period || undefined, // Hanya dikirim jika user memilih salah satu opsi filter
+                },
+            })
+            return response.data
+        },
+        placeholderData: (previousData) => previousData, // Anti-flicker UI saat ganti filter
+        staleTime: 5 * 60 * 1000,
+    })
+}
+
+export function useGetIncomeStatementDetail(id) {
+    return useQuery({
+        queryKey: ['admin-income-statements', id],
+        queryFn: async () => {
+            const response = await axiosClient.get(`/admin/income-statements/${id}`)
+            return response.data
+        },
+        enabled: !!id, // Hanya mengeksekusi fetch jika ID valid / tidak kosong
+        staleTime: 5 * 60 * 1000,
+    })
+}
