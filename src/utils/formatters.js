@@ -21,3 +21,32 @@ export const formatDate = (date) => {
     day: 'numeric'
   })
 }
+
+
+export const formatAbbreviated = (value) => {
+  if (!value || parseFloat(value) === 0) return '-';
+  const num = Math.abs(parseFloat(value));
+
+  let val = 0;
+  let unit = "";
+
+  if (num >= 1e9) {
+    val = num / 1e9;
+    unit = " B";
+  } else if (num >= 1e6) {
+    val = num / 1e6;
+    unit = " M";
+  } else {
+    val = num;
+  }
+
+  // Konversi ke string, ambil 5 digit angka pertama saja (abaikan titik/koma)
+  let str = val.toString().replace('.', '');
+  str = str.substring(0, 5);
+
+  // Format balik biar ada koma ribuan (contoh: 14689 -> 14,689)
+  // Kita bagi logic-nya supaya kalau digitnya kurang dari 5, tetep rapi
+  const formatted = parseInt(str).toLocaleString('en-US');
+
+  return `${formatted}${unit}`;
+};

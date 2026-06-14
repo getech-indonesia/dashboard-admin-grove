@@ -72,6 +72,17 @@ export function useGetIncomeStatementDetail(id) {
     })
 }
 
+export function useGetIncomeStatementsByCompany(companyId) {
+    return useQuery({
+        queryKey: ['admin-income-statements', 'company', companyId],
+        queryFn: async () => {
+            const response = await axiosClient.get(`/admin/income-statements/company/${companyId}`)
+            return response.data
+        },
+        enabled: !!companyId
+    })
+}
+
 export function useUpsertIncomeStatement() {
     const queryClient = useQueryClient()
     return useMutation({
