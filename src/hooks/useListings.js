@@ -19,6 +19,18 @@ export function useGetListings(page = 1, pageSize = 20, keyword = '', sectorId =
     })
 }
 
+export function useGetListingDetail(id) {
+    return useQuery({
+        queryKey: ['admin-listings', id],
+        queryFn: async () => {
+            const response = await axiosClient.get(`/admin/listings/${id}`)
+            return response.data
+        },
+        enabled: !!id,
+        staleTime: 0,
+    })
+}
+
 export function useSyncStockPrice(id) {
     const queryClient = useQueryClient()
     return useMutation({

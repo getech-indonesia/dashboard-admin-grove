@@ -21,6 +21,7 @@ import BalanceSheetForm from '../components/balance-sheet/BalanceSheetForm'
 import CashFlowList from '../components/cash-flow/CashFlowList'
 import CashFlowForm from '../components/cash-flow/CashFlowForm'
 import JsonEditorPage from '../components/JsonEditor/JsonEditorPage'
+import ListingDetail from '@/components/listing/ListingDetail'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -148,6 +149,7 @@ export default function Dashboard() {
                 <Route path="/listings" element={<ListingList />} />
                 <Route path="/listings/create" element={<ListingForm />} />
                 <Route path="/listings/:id/edit" element={<ListingForm />} />
+                <Route path="/listings/:id/detail" element={<ListingDetail />} />
 
                 {/* Modul Income Statement */}
                 <Route path="/income-statements" element={<IncomeStatementList />} />

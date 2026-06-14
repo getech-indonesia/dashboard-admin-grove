@@ -5,7 +5,6 @@ import { useGetListings } from '@/hooks/useListings'
 import { useGetSectors } from '@/hooks/useSectors'
 import TableFilters from '@/components/dashboard/TableFilters'
 import Pagination from '@/components/dashboard/Pagination'
-import ListingDetail from './ListingDetail'
 
 export default function ListingList() {
   const navigate = useNavigate()
@@ -15,6 +14,7 @@ export default function ListingList() {
 
   const [searchInput, setSearchInput] = useState('')
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
+
   const [selectedSector, setSelectedSector] = useState('')
 
   useEffect(() => {
@@ -23,8 +23,6 @@ export default function ListingList() {
     }, 500)
     return () => clearTimeout(handler)
   }, [searchInput])
-
-  const [activeListing, setActiveListing] = useState(null)
 
   const { data: sectorsData } = useGetSectors()
   const sectors = sectorsData || []
@@ -68,10 +66,6 @@ export default function ListingList() {
         </button>
       </div>
 
-      {/* Catatan: Filter period dihapus dari sini. 
-        Pastikan komponen TableFilters lu sudah dinamis atau buat versi 'Simple' 
-        kalau tidak mau passing props period yang kosong.
-      */}
       <TableFilters
         searchInput={searchInput}
         setSearchInput={setSearchInput}
@@ -81,7 +75,6 @@ export default function ListingList() {
         setPage={setPage}
         handleResetFilters={handleResetFilters}
         activeFiltersCount={activeFiltersCount}
-      // Props 'selectedPeriod' dan 'setSelectedPeriod' sengaja dikosongkan/tidak dipassing
       />
 
       {isLoading && (
@@ -141,7 +134,11 @@ export default function ListingList() {
                       </td>
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setActiveListing(listing)} className="p-1.5 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-900 transition-colors">
+                          {/* Tombol Detail navigasi ke halaman baru */}
+                          <button
+                            onClick={() => navigate(`/dashboard/listings/${listing.id}/detail`)}
+                            className="p-1.5 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-900 transition-colors"
+                          >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => navigate(`/dashboard/listings/${listing.id}/edit`)} className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-colors">
@@ -168,10 +165,6 @@ export default function ListingList() {
             onPageChange={(targetPage) => setPage(targetPage)}
           />
         </div>
-      )}
-
-      {activeListing && (
-        <ListingDetail listing={activeListing} onClose={() => setActiveListing(null)} />
       )}
     </div>
   )
