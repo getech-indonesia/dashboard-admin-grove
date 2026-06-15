@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight, TrendingUp } from 'lucide-react'
+import { GroveLogo } from '@/components/ui/GroveLogo'
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
@@ -19,7 +20,7 @@ export default function Login() {
 
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-zinc-900 border border-zinc-800 rounded-xl mb-4">
-            <TrendingUp className="w-6 h-6 text-emerald-500" />
+            <GroveLogo className="w-6 h-6 text-emerald-400" />
           </div>
           <h1 className="text-xl font-bold text-zinc-100 tracking-tight">
             Dashboard Admin

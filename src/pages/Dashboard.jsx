@@ -22,6 +22,7 @@ import CashFlowList from '../components/cash-flow/CashFlowList'
 import CashFlowForm from '../components/cash-flow/CashFlowForm'
 import JsonEditorPage from '../components/JsonEditor/JsonEditorPage'
 import ListingDetail from '@/components/listing/ListingDetail'
+import { GroveLogo } from '@/components/ui/GroveLogo'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -68,9 +69,7 @@ export default function Dashboard() {
         <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-[#09090b] border-r border-zinc-900 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]`}>
           <div className="h-16 flex items-center px-4 border-b border-zinc-900 justify-between">
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="w-4 h-4 text-emerald-400" />
-              </div>
+              <GroveLogo className="w-6 h-6 text-emerald-400" />
               {sidebarOpen && <span className="font-semibold text-zinc-100 text-[14px] tracking-tight">Grove Admin</span>}
             </div>
             {sidebarOpen && (
