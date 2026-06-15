@@ -31,6 +31,18 @@ export function useGetListingDetail(id) {
     })
 }
 
+export function useGetStockPrices(symbol, before) {
+    return useQuery({
+        queryKey: ['stock-prices', symbol, before],
+        queryFn: async () => {
+            const url = `/admin/stocks/${symbol}/stock-price${before ? `?before=${before}` : ''}`
+            const response = await axiosClient.get(url)
+            return response.data
+        },
+        enabled: !!symbol
+    })
+}
+
 export function useSyncStockPrice(id) {
     const queryClient = useQueryClient()
     return useMutation({

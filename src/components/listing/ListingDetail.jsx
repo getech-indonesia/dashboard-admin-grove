@@ -5,6 +5,7 @@ import { useGetListingDetail, useSyncStockPrice } from '@/hooks/useListings'
 import { useGetIncomeStatementsByCompany } from '@/hooks/useIncomeStatements'
 import { useFormStore } from '@/store/useFormStore'
 import { formatAbbreviated } from '@/utils/formatters'
+import StockChart from '../dashboard/StockChart'
 
 export default function ListingDetail() {
     const { id } = useParams()
@@ -54,9 +55,9 @@ export default function ListingDetail() {
                     <LineChart className="w-4 h-4 text-emerald-500" />
                     <h3 className="text-xs font-bold uppercase text-zinc-300 tracking-wider">Price Analytics</h3>
                 </div>
-                <div className="h-64 bg-[#0c0c0e] border border-zinc-900 rounded-lg flex items-center justify-center text-zinc-600 font-mono text-xs">
-                    [Graphic Chart Placeholder]
-                </div>
+
+                {/* Komponen Chart terintegrasi */}
+                <StockChart symbol={listing.symbol} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
