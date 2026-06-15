@@ -7,14 +7,25 @@ export default function StockChart({ symbol }) {
     const chartRef = useRef(null)
     const seriesRef = useRef(null)
     const allCandlesRef = useRef([])
+    const dataRef = useRef(null)
+    const isLoadingRef = useRef(false)
     const [before, setBefore] = useState(null)
     const { data, isLoading } = useGetStockPrices(symbol, before)
+
+    // Sync data & isLoading ke ref supaya callback bisa baca nilai terbaru
+    useEffect(() => {
+        dataRef.current = data
+    }, [data])
+
+    useEffect(() => {
+        isLoadingRef.current = isLoading
+    }, [isLoading])
 
     useEffect(() => {
         if (!containerRef.current || chartRef.current) return
 
         const chart = createChart(containerRef.current, {
-            autoSize: true, // ← ganti ini, hapus width & height manual
+            autoSize: true,
             layout: { background: { type: ColorType.Solid, color: '#09090b' }, textColor: '#71717a' },
             grid: { vertLines: { color: '#18181b' }, horzLines: { color: '#18181b' } },
         })
@@ -28,8 +39,13 @@ export default function StockChart({ symbol }) {
         seriesRef.current = series
 
         chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
-            if (range && range.from < 0 && data?.hasMore && !isLoading) {
-                setBefore(data.before)
+            if (
+                range &&
+                range.from < 10 &&
+                dataRef.current?.hasMore &&
+                !isLoadingRef.current
+            ) {
+                setBefore(dataRef.current.before)
             }
         })
 
