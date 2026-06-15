@@ -38,5 +38,15 @@ export const formBlueprints = {
         netCashFromInvesting: null, debtIssuance: null, debtRepayment: null, commonStockIssuance: null,
         commonStockRepurchase: null, dividendsPaid: null, otherFinancingActivities: null, netCashFromFinancing: null,
         netChangeInCash: null, cashBeginningPeriod: null, cashEndPeriod: null, freeCashFlow: null
+    },
+    'stock-prices': {
+        companyId: '',
+        date: '',
+        open: null,
+        high: null,
+        low: null,
+        close: null,
+        volume: null,
+        value: null
     }
 }

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Search, X, Plus, AlignLeft, Send, TrendingUp, Wallet, DollarSign, Copy, Trash2 } from 'lucide-react'
+import { Search, X, Plus, AlignLeft, Send, TrendingUp, Wallet, DollarSign, Copy, Trash2, Activity } from 'lucide-react'
 import { useGetCompanies } from '@/hooks/useCompanies'
 import { useUpsertIncomeStatement } from '@/hooks/useIncomeStatements'
 import { useUpsertBalanceSheet } from '@/hooks/useBalanceSheets'
 import { useUpsertCashFlow } from '@/hooks/useCashFlows'
+import { useUpsertStockPrice } from '@/hooks/useStockPrices'
 import { useFormStore } from '@/store/useFormStore'
 import { formBlueprints } from '@/types/formBlueprints'
 
@@ -18,7 +19,8 @@ export default function JsonEditorPage() {
   const [jsonData, setJsonData] = useState({
     incomeStatements: [],
     balanceSheets: [],
-    cashFlows: []
+    cashFlows: [],
+    stockPrices: []
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -75,13 +77,15 @@ export default function JsonEditorPage() {
       ...prev,
       incomeStatements: (prev.incomeStatements || []).map(item => ({ ...item, companyId: company.id })),
       balanceSheets: (prev.balanceSheets || []).map(item => ({ ...item, companyId: company.id })),
-      cashFlows: (prev.cashFlows || []).map(item => ({ ...item, companyId: company.id }))
+      cashFlows: (prev.cashFlows || []).map(item => ({ ...item, companyId: company.id })),
+      stockPrices: (prev.stockPrices || []).map(item => ({ ...item, companyId: company.id }))
     }))
   }
 
   const addItem = (type) => {
     const blueprintType = type === 'incomeStatements' ? 'income-statements' :
-      type === 'balanceSheets' ? 'balance-sheets' : 'cash-flows'
+      type === 'balanceSheets' ? 'balance-sheets' :
+        type === 'cashFlows' ? 'cash-flows' : 'stock-prices'
     const blueprint = { ...formBlueprints[blueprintType] }
     if (selectedCompany) {
       blueprint.companyId = selectedCompany.id
@@ -103,6 +107,7 @@ export default function JsonEditorPage() {
   const upsertIncomeStatement = useUpsertIncomeStatement()
   const upsertBalanceSheet = useUpsertBalanceSheet()
   const upsertCashFlow = useUpsertCashFlow()
+  const upsertStockPrice = useUpsertStockPrice()
 
   const handleSubmit = async () => {
     try {
@@ -131,6 +136,10 @@ export default function JsonEditorPage() {
 
     if ((jsonData.cashFlows || []).length > 0) {
       mutations.push(upsertCashFlow.mutateAsync(jsonData.cashFlows))
+    }
+
+    if ((jsonData.stockPrices || []).length > 0) {
+      mutations.push(upsertStockPrice.mutateAsync(jsonData.stockPrices))
     }
 
     if (mutations.length === 0) {
@@ -178,7 +187,7 @@ export default function JsonEditorPage() {
               <div key={index} className="flex items-center justify-between bg-zinc-900/50 border border-zinc-800 rounded-lg px-3 py-2">
                 <div className="text-xs text-zinc-400 truncate flex-1">
                   <span className="font-mono text-zinc-500 mr-2">#{index + 1}</span>
-                  {item.period} {item.fiscalYear || '-'}
+                  {item.date || (item.period ? `${item.period} ${item.fiscalYear || '-'}` : '-')}
                 </div>
                 <button
                   type="button"
@@ -199,7 +208,8 @@ export default function JsonEditorPage() {
     setJsonData({
       incomeStatements: [],
       balanceSheets: [],
-      cashFlows: []
+      cashFlows: [],
+      stockPrices: []
     })
     setSelectedCompany(null)
     setCompanyQuery('')
@@ -295,6 +305,7 @@ export default function JsonEditorPage() {
           {renderItemList('incomeStatements', 'Income Statements', TrendingUp)}
           {renderItemList('balanceSheets', 'Balance Sheets', Wallet)}
           {renderItemList('cashFlows', 'Cash Flows', DollarSign)}
+          {renderItemList('stockPrices', 'Stock Prices', Activity)}
 
           <div className="space-y-2">
             <button
@@ -335,6 +346,7 @@ export default function JsonEditorPage() {
                 <span>Income: {(jsonData.incomeStatements || []).length}</span>
                 <span>Balance: {(jsonData.balanceSheets || []).length}</span>
                 <span>Cash Flow: {(jsonData.cashFlows || []).length}</span>
+                <span>Stock Prices: {(jsonData.stockPrices || []).length}</span>
               </div>
             </div>
             <textarea
