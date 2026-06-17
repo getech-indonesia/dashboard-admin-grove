@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit, Trash2, BarChart3, Eye, Search, X, LayoutGrid } from 'lucide-react'
+import { Plus, Edit, Trash2, BarChart3, Eye, RefreshCw } from 'lucide-react'
 import { useGetListings } from '@/hooks/useListings'
 import { useGetSectors } from '@/hooks/useSectors'
+import { useSyncIncomeStatementsBySector } from '@/hooks/useIncomeStatements'
 import TableFilters from '@/components/dashboard/TableFilters'
 import Pagination from '@/components/dashboard/Pagination'
+import { useFormStore } from '@/store/useFormStore'
 
 export default function ListingList() {
   const navigate = useNavigate()
+  const showToast = useFormStore((state) => state.showToast)
 
   const [page, setPage] = useState(1)
   const pageSize = 20
@@ -27,12 +30,26 @@ export default function ListingList() {
   const { data: sectorsData } = useGetSectors()
   const sectors = sectorsData || []
 
-  const { data, isLoading, isError, error } = useGetListings(
+  const { data, isLoading, isError, error, refetch } = useGetListings(
     page,
     pageSize,
     debouncedKeyword,
     selectedSector
   )
+
+  const syncIncomeStatementMutation = useSyncIncomeStatementsBySector()
+
+  const handleSyncIncomeStatements = () => {
+    syncIncomeStatementMutation.mutate(selectedSector, {
+      onSuccess: async () => {
+        await refetch()
+        showToast('Income statements synchronized successfully for selected sector', 'success')
+      },
+      onError: (err) => {
+        showToast(err.response?.data?.message || 'Failed to sync income statements', 'error')
+      }
+    })
+  }
 
   const listings = data?.items || []
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 }
@@ -57,13 +74,33 @@ export default function ListingList() {
           <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Listings</h1>
           <p className="text-zinc-500 text-xs mt-1.5">Manage public exchange tickers and security codes.</p>
         </div>
-        <button
-          onClick={() => navigate('/dashboard/listings/create')}
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-medium text-xs rounded-lg transition-all"
-        >
-          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          Add Listing
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncIncomeStatements}
+            disabled={!selectedSector || syncIncomeStatementMutation.isPending}
+            className={`
+              relative inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border px-4 py-2
+              text-xs font-semibold whitespace-nowrap overflow-hidden transition-all duration-300
+              ${(!selectedSector || syncIncomeStatementMutation.isPending)
+                ? 'bg-zinc-900/50 border-zinc-800 text-zinc-500 cursor-not-allowed'
+                : 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-400'
+              }
+            `}
+          >
+            {syncIncomeStatementMutation.isPending && (
+              <span className="absolute inset-0 -translate-x-full animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent" />
+            )}
+            <RefreshCw className={`h-3.5 w-3.5 ${syncIncomeStatementMutation.isPending ? 'animate-spin text-emerald-500/40' : ''}`} />
+            {syncIncomeStatementMutation.isPending ? 'Syncing...' : 'Sync Income Statement'}
+          </button>
+          <button
+            onClick={() => navigate('/dashboard/listings/create')}
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-medium text-xs rounded-lg transition-all"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            Add Listing
+          </button>
+        </div>
       </div>
 
       <TableFilters

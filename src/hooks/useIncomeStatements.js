@@ -114,3 +114,21 @@ export function useSyncIncomeStatements(listingId, companyId) {
         }
     })
 }
+
+export function useSyncIncomeStatementsBySector() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async (sectorId) => {
+            const response = await axiosClient.post(
+                '/admin/income-statements/sync',
+                { sectorId },
+                { timeout: 3600000 }
+            )
+            return response.data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-income-statements'] })
+            queryClient.invalidateQueries({ queryKey: ['admin-listings'] })
+        }
+    })
+}
