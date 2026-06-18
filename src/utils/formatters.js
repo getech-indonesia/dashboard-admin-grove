@@ -25,7 +25,10 @@ export const formatDate = (date) => {
 
 export const formatAbbreviated = (value) => {
   if (!value || parseFloat(value) === 0) return '-';
-  const num = Math.abs(parseFloat(value));
+
+  const parsed = parseFloat(value);
+  const isNegative = parsed < 0;
+  const num = Math.abs(parsed);  
 
   let val = 0;
   let unit = "";
@@ -41,6 +44,7 @@ export const formatAbbreviated = (value) => {
   }
 
   const rounded = Math.round(val);
+  const formattedNumber = `${rounded.toLocaleString('id-ID')}${unit}`;
 
-  return `${rounded.toLocaleString('en-US')}${unit}`;
+  return isNegative ? `(${formattedNumber})` : formattedNumber;
 };
