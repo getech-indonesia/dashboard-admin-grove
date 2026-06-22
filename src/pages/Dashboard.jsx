@@ -22,7 +22,7 @@ import CashFlowList from '../components/cash-flow/CashFlowList'
 import CashFlowForm from '../components/cash-flow/CashFlowForm'
 import JsonEditorPage from '../components/JsonEditor/JsonEditorPage'
 import ListingDetail from '@/components/listing/ListingDetail'
-import GroveScore from './GroveScore'
+import GroveScore from '../components/grove-score/GroveScore'
 import { GroveLogo } from '@/components/ui/GroveLogo'
 
 export default function Dashboard() {

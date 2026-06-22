@@ -58,3 +58,21 @@ export function useSyncStockPrice(id, symbol) {
         }
     })
 }
+
+export function useGetGroveScores(page = 1, pageSize = 20, q = '', sectorId = '') {
+    return useQuery({
+        queryKey: ['admin-listings-scores', page, pageSize, q, sectorId],
+        queryFn: async () => {
+            const response = await axiosClient.get('/admin/listings/scores', {
+                params: {
+                    page,
+                    pageSize,
+                    q: q || undefined,
+                    sectorId: sectorId || undefined
+                }
+            })
+            return response.data
+        },
+        placeholderData: (previousData) => previousData,
+    })
+}
