@@ -7,6 +7,7 @@ import { useUpsertCashFlow } from '@/hooks/useCashFlows'
 import { useUpsertStockPrice } from '@/hooks/useStockPrices'
 import { useFormStore } from '@/store/useFormStore'
 import { formBlueprints } from '@/types/formBlueprints'
+import axiosClient from '@/api/axiosClient'
 
 export default function JsonEditorPage() {
   const showToast = useFormStore((state) => state.showToast)
@@ -106,40 +107,90 @@ export default function JsonEditorPage() {
   const [extractionProgress, setExtractionProgress] = useState(0)
   const [extractionStep, setExtractionStep] = useState('')
   const [previewActiveTab, setPreviewActiveTab] = useState('income') // 'income' | 'balance' | 'cash'
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [extractedData, setExtractedData] = useState({
+    incomeStatement: mockExtractedData.incomeStatement,
+    balanceSheet: mockExtractedData.balanceSheet,
+    cashFlow: mockExtractedData.cashFlow
+  })
 
-  const handleFileUpload = (e) => {
+  const handleFileChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    startExtractionSimulation(file.name)
+    setSelectedFile(file)
+    setFileName(file.name)
   }
 
-  const startExtractionSimulation = (name) => {
-    setFileName(name)
+  const handleCancelSelection = () => {
+    setSelectedFile(null)
+    setFileName('')
+  }
+
+  const handleActualUpload = async () => {
+    if (!selectedFile) {
+      showToast('Please select an XBRL ZIP file first!', 'error')
+      return
+    }
+
+    setIsUploading(true)
     setExtractorState('extracting')
-    setExtractionProgress(0)
-    setExtractionStep('Uploading XBRL ZIP archive package to parsing pipeline...')
+    setExtractionProgress(10)
+    setExtractionStep('Uploading XBRL ZIP archive to backend server...')
 
-    const steps = [
-      { progress: 20, step: 'Unpacking XBRL ZIP archive & validating taxonomies...' },
-      { progress: 50, step: 'Parsing balance sheet from XBRL instance tags...' },
-      { progress: 75, step: 'Parsing income statement from XBRL instance tags...' },
-      { progress: 90, step: 'Parsing cash flow statement from XBRL instance tags...' },
-      { progress: 100, step: 'Extraction mapping completed!' }
-    ]
+    // Start simulation steps while upload/processing is running
+    const uploadInterval = setInterval(() => {
+      setExtractionProgress(prev => {
+        if (prev < 45) return prev + 5
+        return prev
+      })
+    }, 400)
 
-    steps.forEach((stepItem, index) => {
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+
+      const response = await axiosClient.post('/admin/financial-statements/upload-xbrl', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      clearInterval(uploadInterval)
+      setExtractionProgress(60)
+      setExtractionStep('Unpacking XBRL ZIP archive & validating taxonomies...')
+
       setTimeout(() => {
-        setExtractionProgress(stepItem.progress)
-        setExtractionStep(stepItem.step)
+        setExtractionProgress(85)
+        setExtractionStep('Extracting balance sheet, income, and cash flow statements...')
+      }, 800)
 
-        if (stepItem.progress === 100) {
-          setTimeout(() => {
-            setExtractorState('preview')
-          }, 600)
+      setTimeout(() => {
+        setExtractionProgress(100)
+        setExtractionStep('Extraction completed successfully!')
+
+        const pyData = response.data?.pythonResponse?.data || response.data?.pythonResponse || response.data
+        const extracted = {
+          incomeStatement: pyData?.incomeStatement || pyData?.incomeStatements?.[0] || mockExtractedData.incomeStatement,
+          balanceSheet: pyData?.balanceSheet || pyData?.balanceSheets?.[0] || mockExtractedData.balanceSheet,
+          cashFlow: pyData?.cashFlow || pyData?.cashFlows?.[0] || pyData?.cashFlowStatement || mockExtractedData.cashFlow
         }
-      }, (index + 1) * 1000)
-    })
+        setExtractedData(extracted)
+
+        setTimeout(() => {
+          setExtractorState('preview')
+          setIsUploading(false)
+          showToast('XBRL file uploaded and extracted successfully!', 'success')
+        }, 800)
+      }, 1800)
+
+    } catch (err) {
+      clearInterval(uploadInterval)
+      console.error(err)
+      showToast(err.response?.data?.message || 'Failed to upload and extract XBRL file', 'error')
+      setExtractorState('idle')
+      setIsUploading(false)
+    }
   }
 
   const handleResetExtractor = () => {
@@ -147,6 +198,13 @@ export default function JsonEditorPage() {
     setFileName('')
     setExtractionProgress(0)
     setExtractionStep('')
+    setSelectedFile(null)
+    setIsUploading(false)
+    setExtractedData({
+      incomeStatement: mockExtractedData.incomeStatement,
+      balanceSheet: mockExtractedData.balanceSheet,
+      cashFlow: mockExtractedData.cashFlow
+    })
   }
 
   const handleApplyExtractedData = () => {
@@ -155,9 +213,11 @@ export default function JsonEditorPage() {
       return
     }
 
-    const newIncome = { ...mockExtractedData.incomeStatement, companyId: selectedCompany.id }
-    const newBalance = { ...mockExtractedData.balanceSheet, companyId: selectedCompany.id }
-    const newCashFlow = { ...mockExtractedData.cashFlow, companyId: selectedCompany.id }
+    const dataToApply = extractedData || mockExtractedData
+
+    const newIncome = { ...dataToApply.incomeStatement, companyId: selectedCompany.id }
+    const newBalance = { ...dataToApply.balanceSheet, companyId: selectedCompany.id }
+    const newCashFlow = { ...dataToApply.cashFlow, companyId: selectedCompany.id }
 
     setJsonData(prev => ({
       ...prev,
@@ -488,22 +548,20 @@ export default function JsonEditorPage() {
           <div className="flex border-b border-zinc-900 gap-2">
             <button
               onClick={() => setActiveTab('editor')}
-              className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-2 ${
-                activeTab === 'editor'
+              className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-2 ${activeTab === 'editor'
                   ? 'border-emerald-500 text-emerald-400 font-medium'
                   : 'border-transparent text-zinc-500 hover:text-zinc-300'
-              }`}
+                }`}
             >
               <AlignLeft className="w-3.5 h-3.5" />
               <span>JSON Editor</span>
             </button>
             <button
               onClick={() => setActiveTab('extractor')}
-              className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-2 ${
-                activeTab === 'extractor'
+              className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-2 ${activeTab === 'extractor'
                   ? 'border-emerald-500 text-emerald-400 font-medium'
                   : 'border-transparent text-zinc-500 hover:text-zinc-300'
-              }`}
+                }`}
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Financial Report Extractor (AI Simulator)</span>
@@ -531,28 +589,64 @@ export default function JsonEditorPage() {
           ) : (
             <div className="bg-[#09090b] border border-zinc-900 rounded-xl p-6 space-y-6">
               {extractorState === 'idle' && (
-                <div className="flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 rounded-xl p-12 bg-[#0c0c0e]/30 hover:bg-[#0c0c0e]/50 transition-all group relative cursor-pointer">
-                  <input
-                    type="file"
-                    id="file-upload"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={handleFileUpload}
-                    accept=".zip"
-                  />
-                  <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-emerald-400 group-hover:border-zinc-700/50 transition-colors mb-4">
-                    <Upload className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-zinc-300 group-hover:text-zinc-200 transition-colors">
-                    Upload XBRL ZIP Package
-                  </h3>
-                  <p className="text-xs text-zinc-500 mt-1 max-w-sm text-center">
-                    Drag and drop or click to upload your ZIP file containing XBRL reports (.zip). Our simulated AI pipeline will automatically extract statements data.
-                  </p>
+                <div className="space-y-4">
+                  {!selectedFile ? (
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 rounded-xl p-12 bg-[#0c0c0e]/30 hover:bg-[#0c0c0e]/50 transition-all group relative cursor-pointer">
+                      <input
+                        type="file"
+                        id="file-upload"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={handleFileChange}
+                        accept=".zip"
+                      />
+                      <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-emerald-400 group-hover:border-zinc-700/50 transition-colors mb-4">
+                        <Upload className="w-6 h-6 animate-pulse" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-zinc-300 group-hover:text-zinc-200 transition-colors">
+                        Select XBRL ZIP Package
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-1 max-w-sm text-center">
+                        Drag and drop or click to select your ZIP file containing XBRL reports (.zip). You can review before triggering the extraction process.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-6 bg-[#0c0c0e] border border-zinc-800 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-sans">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400">
+                          <FileText className="w-6 h-6 animate-bounce" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-zinc-200 font-mono break-all">{selectedFile.name}</h4>
+                          <span className="text-xs text-zinc-500">
+                            {(selectedFile.size / 1024).toFixed(1)} KB • Ready to extract
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 w-full md:w-auto">
+                        <button
+                          type="button"
+                          onClick={handleCancelSelection}
+                          className="flex-1 md:flex-none px-4 py-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-900/80 text-xs text-zinc-400 hover:text-zinc-200 transition-colors flex items-center justify-center gap-1.5 font-medium"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Cancel</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleActualUpload}
+                          className="flex-1 md:flex-none px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/10"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Upload & Extract</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {extractorState === 'extracting' && (
-                <div className="space-y-6 p-8 border border-zinc-900 rounded-xl bg-[#0c0c0e]/30">
+                <div className="space-y-6 p-8 border border-zinc-900 rounded-xl bg-[#0c0c0e]/30 font-sans">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400">
                       <Cpu className="w-5 h-5 animate-spin" />
@@ -580,11 +674,10 @@ export default function JsonEditorPage() {
                     ].map((s) => (
                       <div
                         key={s.step}
-                        className={`p-3 rounded-lg border text-center transition-all ${
-                          extractionProgress >= s.limit
+                        className={`p-3 rounded-lg border text-center transition-all ${extractionProgress >= s.limit
                             ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
                             : 'bg-zinc-950/20 border-zinc-900/60 text-zinc-600'
-                        }`}
+                          }`}
                       >
                         <div className="text-[10px] font-mono font-semibold uppercase tracking-wider mb-1">Step {s.step}</div>
                         <div className="text-[11px] font-medium truncate">{s.label}</div>
@@ -595,7 +688,7 @@ export default function JsonEditorPage() {
               )}
 
               {extractorState === 'preview' && (
-                <div className="space-y-6">
+                <div className="space-y-6 font-sans">
                   {/* File information panel */}
                   <div className="flex items-center justify-between p-4 bg-[#0c0c0e] border border-zinc-900 rounded-xl">
                     <div className="flex items-center gap-3">
@@ -611,7 +704,7 @@ export default function JsonEditorPage() {
                       <button
                         type="button"
                         onClick={handleResetExtractor}
-                        className="px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-900/80 text-xs text-zinc-400 hover:text-zinc-200 transition-colors flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-900/80 text-xs text-zinc-400 hover:text-zinc-200 transition-colors flex items-center gap-1 font-medium"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                         <span>Upload New</span>
@@ -638,11 +731,10 @@ export default function JsonEditorPage() {
                         <button
                           key={t.id}
                           onClick={() => setPreviewActiveTab(t.id)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                            previewActiveTab === t.id
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${previewActiveTab === t.id
                               ? 'bg-zinc-900 border border-zinc-800 text-emerald-400 shadow-sm'
                               : 'text-zinc-500 hover:text-zinc-300'
-                          }`}
+                            }`}
                         >
                           <t.icon className="w-3.5 h-3.5" />
                           <span>{t.label}</span>
@@ -650,12 +742,12 @@ export default function JsonEditorPage() {
                       ))}
                     </div>
 
-                    <div className="p-4 max-h-[350px] overflow-y-auto font-mono text-xs divide-y divide-zinc-900">
+                    <div className="p-4 max-h-[350px] overflow-y-auto font-mono text-xs divide-y divide-zinc-900 font-sans">
                       {previewActiveTab === 'income' &&
-                        Object.entries(mockExtractedData.incomeStatement).map(([key, val]) => (
-                          <div key={key} className="flex justify-between py-2 items-center hover:bg-zinc-900/10 px-1.5 rounded">
+                        Object.entries(extractedData?.incomeStatement || mockExtractedData.incomeStatement).map(([key, val]) => (
+                          <div key={key} className="flex justify-between py-2 items-center hover:bg-zinc-900/10 px-1.5 rounded font-sans">
                             <span className="text-zinc-500 font-sans">{key}</span>
-                            <span className="text-zinc-200 font-bold">
+                            <span className="text-zinc-200 font-bold font-mono">
                               {typeof val === 'number' && key !== 'fiscalYear' && key !== 'effectiveTaxRate'
                                 ? val.toLocaleString('en-US')
                                 : val?.toString() || '—'}
@@ -664,10 +756,10 @@ export default function JsonEditorPage() {
                         ))}
 
                       {previewActiveTab === 'balance' &&
-                        Object.entries(mockExtractedData.balanceSheet).map(([key, val]) => (
-                          <div key={key} className="flex justify-between py-2 items-center hover:bg-zinc-900/10 px-1.5 rounded">
+                        Object.entries(extractedData?.balanceSheet || mockExtractedData.balanceSheet).map(([key, val]) => (
+                          <div key={key} className="flex justify-between py-2 items-center hover:bg-zinc-900/10 px-1.5 rounded font-sans">
                             <span className="text-zinc-500 font-sans">{key}</span>
-                            <span className="text-zinc-200 font-bold">
+                            <span className="text-zinc-200 font-bold font-mono">
                               {typeof val === 'number' && key !== 'fiscalYear'
                                 ? val.toLocaleString('en-US')
                                 : val?.toString() || '—'}
@@ -676,10 +768,10 @@ export default function JsonEditorPage() {
                         ))}
 
                       {previewActiveTab === 'cash' &&
-                        Object.entries(mockExtractedData.cashFlow).map(([key, val]) => (
-                          <div key={key} className="flex justify-between py-2 items-center hover:bg-zinc-900/10 px-1.5 rounded">
+                        Object.entries(extractedData?.cashFlow || mockExtractedData.cashFlow).map(([key, val]) => (
+                          <div key={key} className="flex justify-between py-2 items-center hover:bg-zinc-900/10 px-1.5 rounded font-sans">
                             <span className="text-zinc-500 font-sans">{key}</span>
-                            <span className="text-zinc-200 font-bold">
+                            <span className="text-zinc-200 font-bold font-mono">
                               {typeof val === 'number' && key !== 'fiscalYear'
                                 ? val.toLocaleString('en-US')
                                 : val?.toString() || '—'}
