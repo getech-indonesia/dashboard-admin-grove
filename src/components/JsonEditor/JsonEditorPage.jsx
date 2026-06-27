@@ -812,7 +812,7 @@ export default function JsonEditorPage() {
                     {/* Accumulated Data Warning & De-accumulate action */}
                     {!isDeAccumulated && (() => {
                       const period = extractedData?.incomeStatement?.period || extractedData?.balanceSheet?.period || extractedData?.cashFlow?.period || '';
-                      const isAccumulated = period && ['Q2', 'Q3', 'ANNUAL'].includes(period.toUpperCase());
+                      const isAccumulated = period && ['Q2', 'Q3', 'Q4', 'ANNUAL', 'FY'].includes(period.toUpperCase());
                       if (!isAccumulated) return null;
 
                       return (
