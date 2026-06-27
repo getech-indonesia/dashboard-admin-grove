@@ -158,7 +158,7 @@ export default function JsonEditorPage() {
       const formData = new FormData()
       formData.append('file', selectedFile)
 
-      const response = await axiosClient.post('/admin/financial-statements/upload-xbrl', formData, {
+      const response = await axiosClient.post('/admin/financial-statements/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -239,7 +239,7 @@ export default function JsonEditorPage() {
 
     setIsDeAccumulating(true)
     try {
-      const response = await axiosClient.post('/financial-statements/de-accumulate', {
+      const response = await axiosClient.post('/admin/financial-statements/de-accumulate', {
         incomeStatement: { ...extractedData.incomeStatement, companyId: selectedCompany.id },
         balanceSheet: { ...extractedData.balanceSheet, companyId: selectedCompany.id },
         cashFlow: { ...extractedData.cashFlow, companyId: selectedCompany.id }
