@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, X, Plus, AlignLeft, Send, TrendingUp, Wallet, DollarSign, Copy, Trash2, Activity, Upload, FileText, Cpu, Sparkles, RefreshCw } from 'lucide-react'
+import { Search, X, Plus, AlignLeft, Send, TrendingUp, Wallet, DollarSign, Copy, Trash2, Activity, Upload, FileText, Cpu, Sparkles, RefreshCw, AlertTriangle } from 'lucide-react'
 import { useGetCompanies } from '@/hooks/useCompanies'
 import { useUpsertIncomeStatement } from '@/hooks/useIncomeStatements'
 import { useUpsertBalanceSheet } from '@/hooks/useBalanceSheets'
@@ -110,6 +110,8 @@ export default function JsonEditorPage() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [extractedConfident, setExtractedConfident] = useState(null)
+  const [isDeAccumulated, setIsDeAccumulated] = useState(false)
+  const [isDeAccumulating, setIsDeAccumulating] = useState(false)
   const [extractedData, setExtractedData] = useState({
     incomeStatement: mockExtractedData.incomeStatement,
     balanceSheet: mockExtractedData.balanceSheet,
@@ -221,11 +223,48 @@ export default function JsonEditorPage() {
     setSelectedFile(null)
     setIsUploading(false)
     setExtractedConfident(null)
+    setIsDeAccumulated(false)
     setExtractedData({
       incomeStatement: mockExtractedData.incomeStatement,
       balanceSheet: mockExtractedData.balanceSheet,
       cashFlow: mockExtractedData.cashFlow
     })
+  }
+
+  const handleDeAccumulate = async () => {
+    if (!selectedCompany) {
+      showToast('Please select a company/emiten first!', 'error')
+      return
+    }
+
+    setIsDeAccumulating(true)
+    try {
+      const response = await axiosClient.post('/financial-statements/de-accumulate', {
+        incomeStatement: { ...extractedData.incomeStatement, companyId: selectedCompany.id },
+        balanceSheet: { ...extractedData.balanceSheet, companyId: selectedCompany.id },
+        cashFlow: { ...extractedData.cashFlow, companyId: selectedCompany.id }
+      })
+
+      const deAccumulated = response.data?.data || response.data
+
+      const newIncome = deAccumulated.incomeStatement || extractedData.incomeStatement
+      const newBalance = deAccumulated.balanceSheet || extractedData.balanceSheet
+      const newCash = deAccumulated.cashFlow || extractedData.cashFlow
+
+      setExtractedData({
+        incomeStatement: { ...newIncome, companyId: selectedCompany.id },
+        balanceSheet: { ...newBalance, companyId: selectedCompany.id },
+        cashFlow: { ...newCash, companyId: selectedCompany.id }
+      })
+
+      setIsDeAccumulated(true)
+      showToast('Successfully de-accumulated to quarterly values!', 'success')
+    } catch (err) {
+      console.error(err)
+      showToast(err.response?.data?.message || 'Failed to de-accumulate statements', 'error')
+    } finally {
+      setIsDeAccumulating(false)
+    }
   }
 
   const handleApplyExtractedData = () => {
@@ -769,6 +808,45 @@ export default function JsonEditorPage() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Accumulated Data Warning & De-accumulate action */}
+                    {!isDeAccumulated && (() => {
+                      const period = extractedData?.incomeStatement?.period || extractedData?.balanceSheet?.period || extractedData?.cashFlow?.period || '';
+                      const isAccumulated = period && ['Q2', 'Q3', 'ANNUAL'].includes(period.toUpperCase());
+                      if (!isAccumulated) return null;
+
+                      return (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0">
+                              <AlertTriangle className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h5 className="text-xs font-semibold text-amber-400">Hasil ekstraksi adalah data akumulasi</h5>
+                              <p className="text-[10px] text-zinc-500 font-sans">Laporan keuangan ini mencakup periode kumulatif. Anda dapat mengonversinya ke data kuartal tunggal.</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleDeAccumulate}
+                            disabled={isDeAccumulating}
+                            className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm shadow-amber-500/10 disabled:opacity-40"
+                          >
+                            {isDeAccumulating ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Processing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Show Quarterly</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })()}
 
                     {/* Statements previews tab system */}
                     <div className="border border-zinc-900 rounded-xl overflow-hidden bg-[#0c0c0e]/30">
