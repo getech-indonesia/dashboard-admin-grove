@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import {
-  Building2, List, TrendingUp, Wallet, DollarSign, BarChart3, LogOut, Menu, X, Code2, FileJson, Sparkles, FolderTree, FileText
+  Building2, List, TrendingUp, Wallet, DollarSign, BarChart3, LogOut, Menu, X, Code2, FileJson, Sparkles, FolderTree, FileText, Landmark
 } from 'lucide-react'
 import Toast from '@/components/dashboard/Toast'
 import { useFormStore } from '@/store/useFormStore'
@@ -26,6 +26,7 @@ import GroveScore from '../components/grove-score/GroveScore'
 import { GroveLogo } from '@/components/ui/GroveLogo'
 import IndustrySectorPage from '../components/industry-sector/IndustrySectorPage'
 import FinancialStatementPage from '../components/financial-statement/FinancialStatementPage'
+import CompanyListingPage from '../components/company-listing/CompanyListingPage'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -57,8 +58,7 @@ export default function Dashboard() {
 
   const menuItems = [
     { path: '/dashboard/grove-score', label: 'Grove Score', icon: Sparkles },
-    { path: '/dashboard/companies', label: 'Company', icon: Building2 },
-    { path: '/dashboard/listings', label: 'Listing', icon: List },
+    { path: '/dashboard/companies-listings', label: 'Company & Listing', icon: Landmark },
     { path: '/dashboard/industries-sectors', label: 'Industry & Sector', icon: FolderTree },
     { path: '/dashboard/financial-statements', label: 'Financial Statement', icon: FileText },
     { path: '/dashboard/json-editor', label: 'JSON Editor', icon: FileJson }
@@ -149,13 +149,16 @@ export default function Dashboard() {
                 {/* Modul Grove Score */}
                 <Route path="/grove-score" element={<GroveScore />} />
 
-                {/* Modul Company */}
-                <Route path="/companies" element={<CompanyList />} />
+                {/* Modul Company & Listing */}
+                <Route path="/companies-listings" element={<CompanyListingPage />} />
+                
+                {/* Modul Company compatibility redirects & forms */}
+                <Route path="/companies" element={<Navigate to="/dashboard/companies-listings?tab=companies" replace />} />
                 <Route path="/companies/create" element={<CompanyForm />} />
                 <Route path="/companies/:id/edit" element={<CompanyForm />} />
 
-                {/* Modul Listing */}
-                <Route path="/listings" element={<ListingList />} />
+                {/* Modul Listing compatibility redirects & forms */}
+                <Route path="/listings" element={<Navigate to="/dashboard/companies-listings?tab=listings" replace />} />
                 <Route path="/listings/create" element={<ListingForm />} />
                 <Route path="/listings/:id/edit" element={<ListingForm />} />
                 <Route path="/listings/:id/detail" element={<ListingDetail />} />

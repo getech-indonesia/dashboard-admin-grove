@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit, Trash2, Building2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Edit, Building2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useGetCompanies } from '@/hooks/useCompanies'
 import Pagination from '@/components/dashboard/Pagination'
 
@@ -63,8 +63,11 @@ export default function CompanyList() {
 
                 <thead className="bg-[#0c0c0e] border-b border-zinc-900">
                   <tr>
-                    <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider w-[35%]">
+                    <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider w-[25%]">
                       Company
+                    </th>
+                    <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider w-[20%]">
+                      Listings
                     </th>
                     <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
                       Status
@@ -112,6 +115,29 @@ export default function CompanyList() {
                           </div>
                         </td>
 
+                        {/* Associated Ticker Listings Badges */}
+                        <td className="px-5 py-4">
+                          {company.listings && company.listings.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {company.listings.map((l) => (
+                                <span
+                                  key={l.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    navigate(`/dashboard/listings/${l.id}/detail`)
+                                  }}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-900 border border-zinc-800 text-zinc-300 hover:border-emerald-500/30 hover:text-emerald-400 cursor-pointer transition-colors"
+                                  title={`View detail for ${l.symbol}`}
+                                >
+                                  {l.symbol}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-zinc-650 text-[11px] font-mono italic">No listings</span>
+                          )}
+                        </td>
+
                         {/* Status Badge */}
                         <td className="px-5 py-4">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wider border ${company.status === 'ACTIVE'
@@ -151,19 +177,13 @@ export default function CompanyList() {
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              className="p-1.5 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/30 transition-colors"
-                              title="Delete Company"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
                           </div>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-5 py-12 text-center text-zinc-600 font-mono text-xs">
+                      <td colSpan={7} className="px-5 py-12 text-center text-zinc-600 font-mono text-xs">
                         No corporate data available in this index segment.
                       </td>
                     </tr>

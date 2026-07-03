@@ -440,7 +440,7 @@ export default function IndustrySectorPage() {
 
             {/* SECTOR MODAL (CREATE/EDIT) */}
             {sectorModal.isOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 -top-[2rem] bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-[#0c0c0e] border border-zinc-800 rounded-xl max-w-md w-full overflow-hidden shadow-2xl animate-fade-in-up">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-900">
                             <h3 className="font-bold text-zinc-100 text-sm">
@@ -497,7 +497,7 @@ export default function IndustrySectorPage() {
 
             {/* INDUSTRY MODAL (CREATE/EDIT) */}
             {industryModal.isOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 -top-[2rem] bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-[#0c0c0e] border border-zinc-800 rounded-xl max-w-md w-full overflow-hidden shadow-2xl animate-fade-in-up">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-900">
                             <h3 className="font-bold text-zinc-100 text-sm">
@@ -573,7 +573,7 @@ export default function IndustrySectorPage() {
 
             {/* DELETE CONFIRM MODAL */}
             {deleteConfirm.isOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 -top-[2rem] bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-[#0c0c0e] border border-zinc-800 rounded-xl max-w-md w-full overflow-hidden shadow-2xl animate-fade-in-up">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-900">
                             <h3 className="font-bold text-red-400 text-sm flex items-center gap-2">

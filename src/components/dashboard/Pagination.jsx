@@ -1,13 +1,16 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-export default function Pagination({ page, totalPages, total, itemsCount, onPageChange }) {
+export default function Pagination({ page, totalPages, total, itemsCount, onPageChange, pageSize = 20 }) {
+    const start = total === 0 ? 0 : (page - 1) * pageSize + 1
+    const end = total === 0 ? 0 : start + itemsCount - 1
+
     // Pengaman jika data belum dimuat oleh TanStack Query
     if (!totalPages || totalPages <= 1) {
         if (total > 0) {
             return (
                 <div className="flex items-center justify-between px-2 py-1 text-xs text-zinc-500 font-medium">
                     <div>
-                        Showing <span className="text-zinc-300 font-mono">{itemsCount}</span> rows of{' '}
+                        Showing <span className="text-zinc-300 font-mono">{start}-{end}</span> of{' '}
                         <span className="text-zinc-300 font-mono">{total}</span> entries.
                     </div>
                 </div>
@@ -20,7 +23,7 @@ export default function Pagination({ page, totalPages, total, itemsCount, onPage
         <div className="flex items-center justify-between px-2 py-1 text-xs text-zinc-500 font-medium animate-fade-in">
             {/* Informasi Baris Data */}
             <div>
-                Showing <span className="text-zinc-300 font-mono">{itemsCount}</span> rows of{' '}
+                Showing <span className="text-zinc-300 font-mono">{start}-{end}</span> of{' '}
                 <span className="text-zinc-300 font-mono">{total}</span> entries.
             </div>
 

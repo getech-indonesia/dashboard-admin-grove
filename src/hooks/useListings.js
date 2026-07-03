@@ -76,3 +76,16 @@ export function useGetGroveScores(page = 1, pageSize = 20, q = '', sectorId = ''
         placeholderData: (previousData) => previousData,
     })
 }
+
+export function useDeleteListing() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async (id) => {
+            const response = await axiosClient.delete(`/admin/listings/${id}`)
+            return response.data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-listings'] })
+        }
+    })
+}

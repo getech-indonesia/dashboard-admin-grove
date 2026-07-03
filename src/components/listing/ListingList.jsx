@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit, Trash2, BarChart3, Eye, RefreshCw } from 'lucide-react'
-import { useGetListings } from '@/hooks/useListings'
+import { Plus, Edit, Trash2, BarChart3, Eye, RefreshCw, Loader2 } from 'lucide-react'
+import { useGetListings, useDeleteListing } from '@/hooks/useListings'
 import { useGetSectors } from '@/hooks/useSectors'
 import { useSyncIncomeStatementsBySector } from '@/hooks/useIncomeStatements'
 import { useSyncBalanceSheetsBySector } from '@/hooks/useBalanceSheets'
@@ -13,6 +13,20 @@ import { useFormStore } from '@/store/useFormStore'
 export default function ListingList() {
   const navigate = useNavigate()
   const showToast = useFormStore((state) => state.showToast)
+  const deleteListingMutation = useDeleteListing()
+
+  const handleDeleteListing = (id, symbol) => {
+    if (window.confirm(`Are you sure you want to delete listing for "${symbol}"?`)) {
+      deleteListingMutation.mutate(id, {
+        onSuccess: () => {
+          showToast(`Listing ${symbol} deleted successfully`, 'success')
+        },
+        onError: (err) => {
+          showToast(err.response?.data?.message || `Failed to delete listing ${symbol}`, 'error')
+        }
+      })
+    }
+  }
 
   const [page, setPage] = useState(1)
   const pageSize = 20
@@ -151,10 +165,10 @@ export default function ListingList() {
             <table className="w-full border-collapse">
               <thead className="bg-[#0c0c0e] border-b border-zinc-900">
                 <tr>
+                  <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider w-[20%]">Symbol</th>
                   <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider w-[25%]">Company</th>
-                  <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Symbol</th>
                   <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Exchange</th>
-                  <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Asset Type</th>
+                  <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Identifiers</th>
                   <th className="text-right px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider w-[120px]">Actions</th>
                 </tr>
               </thead>
@@ -162,45 +176,73 @@ export default function ListingList() {
                 {listings.length > 0 ? (
                   listings.map((listing) => (
                     <tr key={listing.id} className="hover:bg-[#0c0c0e]/60 transition-colors group">
+                      {/* Symbol & Asset Type */}
                       <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {listing.company?.logoUrl ? (
-                              <img src={listing.company.logoUrl} alt={listing.company.displayName} className="w-full h-full object-contain p-1" />
-                            ) : (
-                              <BarChart3 className="w-4 h-4 text-zinc-500" />
-                            )}
-                          </div>
-                          <div className="truncate">
-                            <span className="font-semibold text-zinc-100 text-[13px] block truncate">{listing.company?.displayName}</span>
-                            <span className="text-[10px] text-zinc-500 font-mono">{listing.company?.legalName}</span>
-                          </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-bold text-zinc-100 text-[14px] font-mono tracking-wider">{listing.symbol}</span>
+                          <span className="inline-flex items-center w-max px-1.5 py-0.5 rounded text-[9px] font-bold bg-zinc-900 text-zinc-500 border border-zinc-800 tracking-wider uppercase">
+                            {listing.assetType}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 font-mono text-zinc-300 text-[13px] tracking-wider">{listing.symbol}</td>
+
+                      {/* Connected Company Display */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="size-6 bg-zinc-900 border border-zinc-800 rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {listing.company?.logoUrl ? (
+                              <img src={listing.company.logoUrl} alt={listing.company.displayName} className="w-full h-full object-contain p-0.5" />
+                            ) : (
+                              <BarChart3 className="w-3.5 h-3.5 text-zinc-500" />
+                            )}
+                          </div>
+                          <span className="font-medium text-zinc-300 text-[13px] truncate max-w-[180px]">{listing.company?.displayName || '—'}</span>
+                        </div>
+                      </td>
+
+                      {/* Exchange Code */}
                       <td className="px-5 py-4 text-zinc-400 text-[13px]">
                         <span className="bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded text-[11px] font-medium text-zinc-300">
-                          {listing.exchange?.name}
+                          {listing.exchange?.name || listing.exchange?.code || '—'}
                         </span>
                       </td>
+
+                      {/* Identifiers: ISIN / CUSIP */}
                       <td className="px-5 py-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800 tracking-wider">
-                          {listing.assetType}
-                        </span>
+                        <div className="flex flex-col gap-0.5 text-[10.5px] font-mono text-zinc-500">
+                          <div><span className="text-zinc-600">ISIN:</span> {listing.isin || '—'}</div>
+                          <div><span className="text-zinc-600">CUSIP:</span> {listing.cusip || '—'}</div>
+                        </div>
                       </td>
+
+                      {/* Actions */}
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => navigate(`/dashboard/listings/${listing.id}/detail`)}
                             className="p-1.5 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-900 transition-colors"
+                            title="View Detail"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => navigate(`/dashboard/listings/${listing.id}/edit`)} className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-colors">
+                          <button
+                            onClick={() => navigate(`/dashboard/listings/${listing.id}/edit`)}
+                            className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-colors"
+                            title="Edit Listing"
+                          >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
-                          <button className="p-1.5 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/30 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
+                          <button
+                            onClick={() => handleDeleteListing(listing.id, listing.symbol)}
+                            disabled={deleteListingMutation.isPending}
+                            className="p-1.5 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/30 transition-colors disabled:opacity-40"
+                            title="Delete Listing"
+                          >
+                            {deleteListingMutation.isPending ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         </div>
                       </td>
