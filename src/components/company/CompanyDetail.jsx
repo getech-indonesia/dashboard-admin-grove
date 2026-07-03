@@ -162,11 +162,10 @@ export default function CompanyDetail() {
                         <div className="space-y-1">
                             <h2 className="text-lg font-bold text-zinc-100">{company.displayName}</h2>
                             <p className="text-xs text-zinc-500 font-mono">{company.legalName}</p>
-                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border mt-2 ${
-                                company.status === 'ACTIVE'
-                                    ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10'
-                                    : 'bg-zinc-900 text-zinc-500 border-zinc-800'
-                            }`}>
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border mt-2 ${company.status === 'ACTIVE'
+                                ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10'
+                                : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                                }`}>
                                 <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                                 {company.status}
                             </span>
@@ -320,7 +319,7 @@ export default function CompanyDetail() {
                                             {sh.date ? sh.date.split('T')[0] : '—'}
                                         </td>
                                         <td className="py-3 px-2 text-right">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => openEditModal(sh)}
                                                     className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-colors"

@@ -2,15 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosClient from '../api/axiosClient'
 
 // Hook untuk Fetch Data List (GET)
-export function useGetCompanies(page = 1, pageSize = 20, keyword = '') {
+export function useGetCompanies(page = 1, pageSize = 20, keyword = '', sectorId = '') {
     return useQuery({
-        queryKey: ['admin-companies', page, pageSize, keyword],
+        queryKey: ['admin-companies', page, pageSize, keyword, sectorId],
         queryFn: async () => {
             const response = await axiosClient.get('/admin/companies', {
                 params: {
                     page,
                     pageSize,
                     keyword: keyword || undefined,
+                    sectorId: sectorId || undefined,
                 },
             })
             return response.data

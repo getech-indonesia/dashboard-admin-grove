@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Edit, Eye, Building2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useGetCompanies } from '@/hooks/useCompanies'
+import { useGetSectors } from '@/hooks/useSectors'
 import Pagination from '@/components/dashboard/Pagination'
+import TableFilters from '@/components/dashboard/TableFilters'
 
 export default function CompanyList() {
   const navigate = useNavigate()
@@ -11,12 +13,38 @@ export default function CompanyList() {
   const [page, setPage] = useState(1)
   const pageSize = 20 // Sesuai dengan spesifikasi API default Anda
 
+  const [searchInput, setSearchInput] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
+  const [selectedSector, setSelectedSector] = useState('')
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedKeyword(searchInput)
+    }, 500)
+    return () => clearTimeout(handler)
+  }, [searchInput])
+
+  const { data: sectorsData } = useGetSectors()
+  const sectors = sectorsData || []
+
   // Panggil data langsung menggunakan TanStack Query Hook
-  const { data, isLoading, isError, error } = useGetCompanies(page, pageSize)
+  const { data, isLoading, isError, error } = useGetCompanies(page, pageSize, debouncedKeyword, selectedSector)
 
   // Ekstrak properti response API secara aman
   const companies = data?.items || []
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 }
+
+  const activeFiltersCount = [
+    debouncedKeyword !== '',
+    selectedSector !== ''
+  ].filter(Boolean).length
+
+  const handleResetFilters = () => {
+    setSearchInput('')
+    setDebouncedKeyword('')
+    setSelectedSector('')
+    setPage(1)
+  }
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in text-sm text-zinc-300">
@@ -40,6 +68,17 @@ export default function CompanyList() {
           Add Company
         </button>
       </div>
+
+      <TableFilters
+        searchInput={searchInput}
+        setSearchInput={setSearchInput}
+        selectedSector={selectedSector}
+        setSelectedSector={setSelectedSector}
+        sectors={sectors}
+        setPage={setPage}
+        handleResetFilters={handleResetFilters}
+        activeFiltersCount={activeFiltersCount}
+      />
 
       {/* CONDITION HANDLING: LOADING & ERROR */}
       {isLoading && (
@@ -66,7 +105,7 @@ export default function CompanyList() {
                     <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider w-[25%]">
                       Company
                     </th>
-                    <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider w-[20%]">
+                    <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider w-[30%]!">
                       Listings
                     </th>
                     <th className="text-left px-5 py-3.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
