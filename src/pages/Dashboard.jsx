@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import {
-  Building2, List, TrendingUp, Wallet, DollarSign, BarChart3, LogOut, Menu, X, Code2, FileJson, Sparkles
+  Building2, List, TrendingUp, Wallet, DollarSign, BarChart3, LogOut, Menu, X, Code2, FileJson, Sparkles, FolderTree
 } from 'lucide-react'
 import Toast from '@/components/dashboard/Toast'
 import { useFormStore } from '@/store/useFormStore'
@@ -24,6 +24,7 @@ import JsonEditorPage from '../components/JsonEditor/JsonEditorPage'
 import ListingDetail from '@/components/listing/ListingDetail'
 import GroveScore from '../components/grove-score/GroveScore'
 import { GroveLogo } from '@/components/ui/GroveLogo'
+import IndustrySectorPage from '../components/industry-sector/IndustrySectorPage'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -57,6 +58,7 @@ export default function Dashboard() {
     { path: '/dashboard/grove-score', label: 'Grove Score', icon: Sparkles },
     { path: '/dashboard/companies', label: 'Company', icon: Building2 },
     { path: '/dashboard/listings', label: 'Listing', icon: List },
+    { path: '/dashboard/industries-sectors', label: 'Industry & Sector', icon: FolderTree },
     { path: '/dashboard/income-statements', label: 'Income Statement', icon: TrendingUp },
     { path: '/dashboard/balance-sheets', label: 'Balance Sheet', icon: Wallet },
     { path: '/dashboard/cash-flows', label: 'Cash Flow', icon: DollarSign },
@@ -158,6 +160,9 @@ export default function Dashboard() {
                 <Route path="/listings/create" element={<ListingForm />} />
                 <Route path="/listings/:id/edit" element={<ListingForm />} />
                 <Route path="/listings/:id/detail" element={<ListingDetail />} />
+
+                {/* Modul Industry & Sector */}
+                <Route path="/industries-sectors" element={<IndustrySectorPage />} />
 
                 {/* Modul Income Statement */}
                 <Route path="/income-statements" element={<IncomeStatementList />} />

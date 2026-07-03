@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosClient from '../api/axiosClient'
 
-// Fetch all sectors (supporting page, pageSize, q, keyword)
-export function useGetSectors(params = { page: 1, pageSize: 100 }) {
+// Fetch all industries (supporting page, pageSize, q, keyword, sectorId)
+export function useGetIndustries(params = { page: 1, pageSize: 100 }) {
     return useQuery({
-        queryKey: ['admin-sectors', params],
+        queryKey: ['admin-industries', params],
         queryFn: async () => {
-            const response = await axiosClient.get('/admin/sectors', { params })
+            const response = await axiosClient.get('/admin/industries', { params })
             return response.data
         },
         placeholderData: (previousData) => previousData,
@@ -14,13 +14,13 @@ export function useGetSectors(params = { page: 1, pageSize: 100 }) {
     })
 }
 
-// Fetch single sector by ID
-export function useGetSector(id) {
+// Fetch single industry by ID
+export function useGetIndustry(id) {
     return useQuery({
-        queryKey: ['admin-sector', id],
+        queryKey: ['admin-industry', id],
         queryFn: async () => {
             if (!id) return null
-            const response = await axiosClient.get(`/admin/sectors/${id}`)
+            const response = await axiosClient.get(`/admin/industries/${id}`)
             return response.data
         },
         enabled: !!id,
@@ -28,47 +28,50 @@ export function useGetSector(id) {
     })
 }
 
-// Create new sector
-export function useCreateSector() {
+// Create new industry
+export function useCreateIndustry() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: async (payload) => {
-            const response = await axiosClient.post('/admin/sectors', payload)
+            const response = await axiosClient.post('/admin/industries', payload)
             return response.data
         },
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-industries'] })
             queryClient.invalidateQueries({ queryKey: ['admin-sectors'] })
         },
     })
 }
 
-// Update sector by ID
-export function useUpdateSector() {
+// Update industry by ID
+export function useUpdateIndustry() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: async ({ id, payload }) => {
-            const response = await axiosClient.patch(`/admin/sectors/${id}`, payload)
+            const response = await axiosClient.patch(`/admin/industries/${id}`, payload)
             return response.data
         },
         onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['admin-industries'] })
+            queryClient.invalidateQueries({ queryKey: ['admin-industry', variables.id] })
             queryClient.invalidateQueries({ queryKey: ['admin-sectors'] })
-            queryClient.invalidateQueries({ queryKey: ['admin-sector', variables.id] })
         },
     })
 }
 
-// Delete sector by ID
-export function useDeleteSector() {
+// Delete industry by ID
+export function useDeleteIndustry() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: async (id) => {
-            const response = await axiosClient.delete(`/admin/sectors/${id}`)
+            const response = await axiosClient.delete(`/admin/industries/${id}`)
             return response.data
         },
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-industries'] })
             queryClient.invalidateQueries({ queryKey: ['admin-sectors'] })
         },
     })
