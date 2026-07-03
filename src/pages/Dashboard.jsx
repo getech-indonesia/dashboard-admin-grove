@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import {
-  Building2, List, TrendingUp, Wallet, DollarSign, BarChart3, LogOut, Menu, X, Code2, FileJson, Sparkles, FolderTree
+  Building2, List, TrendingUp, Wallet, DollarSign, BarChart3, LogOut, Menu, X, Code2, FileJson, Sparkles, FolderTree, FileText
 } from 'lucide-react'
 import Toast from '@/components/dashboard/Toast'
 import { useFormStore } from '@/store/useFormStore'
@@ -25,6 +25,7 @@ import ListingDetail from '@/components/listing/ListingDetail'
 import GroveScore from '../components/grove-score/GroveScore'
 import { GroveLogo } from '@/components/ui/GroveLogo'
 import IndustrySectorPage from '../components/industry-sector/IndustrySectorPage'
+import FinancialStatementPage from '../components/financial-statement/FinancialStatementPage'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -59,9 +60,7 @@ export default function Dashboard() {
     { path: '/dashboard/companies', label: 'Company', icon: Building2 },
     { path: '/dashboard/listings', label: 'Listing', icon: List },
     { path: '/dashboard/industries-sectors', label: 'Industry & Sector', icon: FolderTree },
-    { path: '/dashboard/income-statements', label: 'Income Statement', icon: TrendingUp },
-    { path: '/dashboard/balance-sheets', label: 'Balance Sheet', icon: Wallet },
-    { path: '/dashboard/cash-flows', label: 'Cash Flow', icon: DollarSign },
+    { path: '/dashboard/financial-statements', label: 'Financial Statement', icon: FileText },
     { path: '/dashboard/json-editor', label: 'JSON Editor', icon: FileJson }
   ]
 
@@ -164,18 +163,21 @@ export default function Dashboard() {
                 {/* Modul Industry & Sector */}
                 <Route path="/industries-sectors" element={<IndustrySectorPage />} />
 
-                {/* Modul Income Statement */}
-                <Route path="/income-statements" element={<IncomeStatementList />} />
+                {/* Modul Financial Statement */}
+                <Route path="/financial-statements" element={<FinancialStatementPage />} />
+                
+                {/* Modul Income Statement compatibility redirects & forms */}
+                <Route path="/income-statements" element={<Navigate to="/dashboard/financial-statements?tab=income-statement" replace />} />
                 <Route path="/income-statements/create" element={<IncomeStatementForm />} />
                 <Route path="/income-statements/:id/edit" element={<IncomeStatementForm />} />
 
-                {/* Modul Balance Sheet */}
-                <Route path="/balance-sheets" element={<BalanceSheetList />} />
+                {/* Modul Balance Sheet compatibility redirects & forms */}
+                <Route path="/balance-sheets" element={<Navigate to="/dashboard/financial-statements?tab=balance-sheet" replace />} />
                 <Route path="/balance-sheets/create" element={<BalanceSheetForm />} />
                 <Route path="/balance-sheets/:id/edit" element={<BalanceSheetForm />} />
 
-                {/* Modul Cash Flow */}
-                <Route path="/cash-flows" element={<CashFlowList />} />
+                {/* Modul Cash Flow compatibility redirects & forms */}
+                <Route path="/cash-flows" element={<Navigate to="/dashboard/financial-statements?tab=cash-flow" replace />} />
                 <Route path="/cash-flows/create" element={<CashFlowForm />} />
                 <Route path="/cash-flows/:id/edit" element={<CashFlowForm />} />
 
