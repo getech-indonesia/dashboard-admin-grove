@@ -12,6 +12,7 @@ import JsonEditorSidebar from '../components/dashboard/JsonEditorSidebar'
 // Import Komponen Halaman Form & List Anda
 import CompanyList from '../components/company/CompanyList'
 import CompanyForm from '../components/company/CompanyForm'
+import CompanyDetail from '../components/company/CompanyDetail'
 import ListingList from '../components/listing/ListingList'
 import ListingForm from '../components/listing/ListingForm'
 import IncomeStatementList from '../components/income-statement/IncomeStatementList'
@@ -156,6 +157,7 @@ export default function Dashboard() {
                 <Route path="/companies" element={<Navigate to="/dashboard/companies-listings?tab=companies" replace />} />
                 <Route path="/companies/create" element={<CompanyForm />} />
                 <Route path="/companies/:id/edit" element={<CompanyForm />} />
+                <Route path="/companies/:id/detail" element={<CompanyDetail />} />
 
                 {/* Modul Listing compatibility redirects & forms */}
                 <Route path="/listings" element={<Navigate to="/dashboard/companies-listings?tab=listings" replace />} />

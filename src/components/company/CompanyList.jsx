@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit, Building2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Edit, Eye, Building2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useGetCompanies } from '@/hooks/useCompanies'
 import Pagination from '@/components/dashboard/Pagination'
 
@@ -170,6 +170,13 @@ export default function CompanyList() {
                         {/* Actions Controller */}
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => navigate(`/dashboard/companies/${company.id}/detail`)}
+                              className="p-1.5 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-900 transition-colors"
+                              title="View Detail"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => navigate(`/dashboard/companies/${company.id}/edit`)}
                               className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-colors"

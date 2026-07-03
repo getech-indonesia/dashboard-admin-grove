@@ -20,6 +20,17 @@ export function useGetCompanies(page = 1, pageSize = 20, keyword = '') {
     })
 }
 
+export function useGetCompanyDetail(id) {
+    return useQuery({
+        queryKey: ['admin-companies', id],
+        queryFn: async () => {
+            const response = await axiosClient.get(`/admin/companies/${id}`)
+            return response.data
+        },
+        enabled: !!id,
+    })
+}
+
 // Hook untuk Create Data Baru (POST) - Mendukung Single & Bulk Array
 export function useCreateCompany() {
     const queryClient = useQueryClient()
