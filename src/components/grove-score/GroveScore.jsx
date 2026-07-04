@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Minus, Search, Sparkles, X, SlidersHorizontal } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Search, Sparkles, X, SlidersHorizontal, ArrowUpDown } from 'lucide-react'
 import { useGetGroveFormulas } from '@/hooks/useGroveFormulas'
 import { useGetGroveScores } from '@/hooks/useListings'
 import { useGetSectors } from '@/hooks/useSectors'
@@ -24,6 +24,7 @@ export default function GroveScore() {
   const [searchInput, setSearchInput] = useState('')
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [selectedSector, setSelectedSector] = useState('')
+  const [selectedSort, setSelectedSort] = useState('')
 
   const [activeFormulaId, setActiveFormulaId] = useState(null)
   const [selectedBreakdown, setSelectedBreakdown] = useState(null)
@@ -45,7 +46,8 @@ export default function GroveScore() {
     page,
     pageSize,
     debouncedKeyword,
-    selectedSector
+    selectedSector,
+    selectedSort
   )
 
   const groveFormulaCards = (formulasData?.items || [])
@@ -66,6 +68,7 @@ export default function GroveScore() {
     setSearchInput('')
     setDebouncedKeyword('')
     setSelectedSector('')
+    setSelectedSort('')
     setPage(1)
   }
 
@@ -95,7 +98,8 @@ export default function GroveScore() {
 
   const activeFiltersCount = [
     debouncedKeyword !== '',
-    selectedSector !== ''
+    selectedSector !== '',
+    selectedSort !== ''
   ].filter(Boolean).length
 
   return (
@@ -209,6 +213,23 @@ export default function GroveScore() {
             </select>
             <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-600 absolute left-3 top-2.5 pointer-events-none" />
           </div>
+
+          {/* Sort dropdown option */}
+          <div className="relative min-w-[180px]">
+            <select
+              value={selectedSort}
+              onChange={(e) => {
+                setSelectedSort(e.target.value)
+                setPage(1)
+              }}
+              className="w-full pl-8 pr-8 py-1.5 bg-[#09090b] border border-zinc-900 rounded-lg text-zinc-300 text-xs focus:outline-none focus:border-zinc-800 transition-colors appearance-none cursor-pointer truncate"
+            >
+              <option value="">Urutan Score (Default)</option>
+              <option value="desc">Score Tertinggi (DESC)</option>
+              <option value="asc">Score Terendah (ASC)</option>
+            </select>
+            <ArrowUpDown className="w-3.5 h-3.5 text-zinc-600 absolute left-3 top-2.5 pointer-events-none" />
+          </div>
         </div>
 
         {activeFiltersCount > 0 && (
@@ -249,7 +270,20 @@ export default function GroveScore() {
                   <th className="px-4 py-4 text-center text-[11px] font-semibold text-[#5cb38d] uppercase tracking-wider w-[8%]">O</th>
                   <th className="px-4 py-4 text-center text-[11px] font-semibold text-[#5cb38d] uppercase tracking-wider w-[8%]">V</th>
                   <th className="px-4 py-4 text-center text-[11px] font-semibold text-[#5cb38d] uppercase tracking-wider w-[8%]">E</th>
-                  <th className="px-5 py-4 text-center text-[11px] font-semibold text-zinc-200 uppercase tracking-wider w-[10%]">SCORE</th>
+                  <th className="px-5 py-4 text-center text-[11px] font-semibold text-zinc-200 uppercase tracking-wider w-[10%] select-none">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextSort = selectedSort === 'desc' ? 'asc' : selectedSort === 'asc' ? '' : 'desc'
+                        setSelectedSort(nextSort)
+                        setPage(1)
+                      }}
+                      className="inline-flex items-center gap-1 mx-auto hover:text-emerald-400 transition-colors focus:outline-none"
+                    >
+                      SCORE
+                      <ArrowUpDown className={`w-3.5 h-3.5 transition-colors ${selectedSort ? 'text-emerald-400' : 'text-zinc-600'}`} />
+                    </button>
+                  </th>
                   <th className="px-5 py-4 text-center text-[11px] font-semibold text-zinc-500 uppercase tracking-wider w-[10%]">STANCE</th>
                 </tr>
               </thead>
