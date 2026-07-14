@@ -30,7 +30,7 @@ const formatEPS = (val) => {
   return Number(num.toFixed(2))
 }
 
-export default function GroveScoreBreakdownModal({ companyName, symbol, companyLogoUrl, metric, data, onClose }) {
+export default function GroveScoreBreakdownModal({ companyName, symbol, companyLogoUrl, metric, data, latestPrice, onClose }) {
   const metricName = metricNames[metric] || metric
   const colorClasses = metricColors[metric] || 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20'
 
@@ -119,6 +119,51 @@ export default function GroveScoreBreakdownModal({ companyName, symbol, companyL
                 </div>
               </div>
 
+              {/* Latest Price Details/Formula */}
+              {latestPrice && (
+                <div className="p-4 rounded-xl border border-zinc-900 bg-[#0c0c0e] space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Latest Price (Latest Market Close)</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-bold text-zinc-100">
+                          Rp{Number(latestPrice.latestClose).toLocaleString('id-ID')}
+                        </span>
+                        <span className={`text-xs font-mono font-medium px-2 py-0.5 rounded ${
+                          latestPrice.direction === 'UP'
+                            ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                            : latestPrice.direction === 'DOWN'
+                            ? 'text-rose-400 bg-rose-500/10 border border-rose-500/20'
+                            : 'text-zinc-400 bg-zinc-500/10 border border-zinc-500/20'
+                        }`}>
+                          {latestPrice.direction === 'UP' ? '+' : ''}
+                          {Number(latestPrice.change).toLocaleString('id-ID')} ({Number(latestPrice.changePct).toFixed(2)}%)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right text-[11px] text-zinc-500 font-mono">
+                      <div>Latest Date: {new Date(latestPrice.latestDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                      <div>Prev Date: {new Date(latestPrice.previousDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900 flex items-start gap-2 text-xs">
+                    <Calculator className="w-4 h-4 text-zinc-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">Latest Price Calculation Formula</span>
+                      <div className="space-y-1 font-mono text-[11px] text-zinc-300">
+                        <div>
+                          <span className="text-zinc-500">Change =</span> {latestPrice.latestClose} - {latestPrice.previousClose} = <span className="text-zinc-200">{latestPrice.change}</span>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Change % =</span> ({latestPrice.latestClose} - {latestPrice.previousClose}) / {latestPrice.previousClose} x 100 = <span className="text-zinc-200">{Number(latestPrice.changePct).toFixed(4)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Sub-metrics breakdown */}
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Sub-Metrics Details</h3>
@@ -175,7 +220,6 @@ export default function GroveScoreBreakdownModal({ companyName, symbol, companyL
                                 </span>
                               </div>
                             )}
-                            
 
                             {subData.roePct !== undefined && subData.roePct !== null && (
                               <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
@@ -221,6 +265,151 @@ export default function GroveScoreBreakdownModal({ companyName, symbol, companyL
                                 </span>
                               </div>
                             )}
+
+                            {/* Relative Strength (R) specific stats */}
+                            {subData.rsRating !== undefined && subData.rsRating !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">RS Rating</span>
+                                <span className="font-mono text-sm font-bold text-sky-400 block mt-0.5">
+                                  {Number(subData.rsRating).toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.currentRank !== undefined && subData.currentRank !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Rank</span>
+                                <span className="font-mono text-sm font-bold text-zinc-200 block mt-0.5">
+                                  {subData.currentRank} <span className="text-zinc-600 font-normal text-xs">/ {subData.totalRanked || '-'}</span>
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.rawPerformance !== undefined && subData.rawPerformance !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Raw Performance</span>
+                                <span className="font-mono text-sm font-bold text-zinc-200 block mt-0.5">
+                                  {Number(subData.rawPerformance).toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.roc63 !== undefined && subData.roc63 !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">ROC 63 (3 Mo)</span>
+                                <span className={`font-mono text-xs font-bold block mt-0.5 ${subData.roc63 >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                  {subData.roc63 > 0 ? '+' : ''}{Number(subData.roc63).toFixed(2)}%
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.roc126 !== undefined && subData.roc126 !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">ROC 126 (6 Mo)</span>
+                                <span className={`font-mono text-xs font-bold block mt-0.5 ${subData.roc126 >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                  {subData.roc126 > 0 ? '+' : ''}{Number(subData.roc126).toFixed(2)}%
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.roc189 !== undefined && subData.roc189 !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">ROC 189 (9 Mo)</span>
+                                <span className={`font-mono text-xs font-bold block mt-0.5 ${subData.roc189 >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                  {subData.roc189 > 0 ? '+' : ''}{Number(subData.roc189).toFixed(2)}%
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.roc252 !== undefined && subData.roc252 !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">ROC 252 (12 Mo)</span>
+                                <span className={`font-mono text-xs font-bold block mt-0.5 ${subData.roc252 >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                  {subData.roc252 > 0 ? '+' : ''}{Number(subData.roc252).toFixed(2)}%
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.close !== undefined && subData.close !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Close Price</span>
+                                <span className="font-mono text-xs font-bold text-zinc-200 block mt-0.5">
+                                  Rp{Number(subData.close).toLocaleString('id-ID')}
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.high52 !== undefined && subData.high52 !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">52 Week High</span>
+                                <span className="font-mono text-xs font-bold text-zinc-200 block mt-0.5">
+                                  Rp{Number(subData.high52).toLocaleString('id-ID')}
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.distanceHighPct !== undefined && subData.distanceHighPct !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Distance High %</span>
+                                <span className="font-mono text-xs font-bold text-rose-400 block mt-0.5">
+                                  {Number(subData.distanceHighPct).toFixed(2)}%
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.low52 !== undefined && subData.low52 !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">52 Week Low</span>
+                                <span className="font-mono text-xs font-bold text-zinc-200 block mt-0.5">
+                                  Rp{Number(subData.low52).toLocaleString('id-ID')}
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.distanceLowPct !== undefined && subData.distanceLowPct !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Low Rebound %</span>
+                                <span className="font-mono text-xs font-bold text-emerald-400 block mt-0.5">
+                                  +{Number(subData.distanceLowPct).toFixed(2)}%
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.deltaRS !== undefined && subData.deltaRS !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">RS Rating Delta</span>
+                                <span className={`font-mono text-xs font-bold block mt-0.5 ${subData.deltaRS >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                  {subData.deltaRS > 0 ? '+' : ''}{Number(subData.deltaRS).toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.currentRSRating !== undefined && subData.currentRSRating !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Current RS Rating</span>
+                                <span className="font-mono text-xs font-bold text-sky-400 block mt-0.5">
+                                  {Number(subData.currentRSRating).toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.rs65TradingDaysAgo !== undefined && subData.rs65TradingDaysAgo !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">RS 65 Days Ago</span>
+                                <span className="font-mono text-xs font-bold text-zinc-300 block mt-0.5">
+                                  {Number(subData.rs65TradingDaysAgo).toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+
+                            {subData.rank65TradingDaysAgo !== undefined && subData.rank65TradingDaysAgo !== null && (
+                              <div className="p-2.5 bg-zinc-900/30 rounded-lg border border-zinc-900">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Rank 65 Days Ago</span>
+                                <span className="font-mono text-xs font-bold text-zinc-300 block mt-0.5">
+                                  {subData.rank65TradingDaysAgo}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -260,27 +449,36 @@ export default function GroveScoreBreakdownModal({ companyName, symbol, companyL
                           </div>
                         )}
 
-                        {/* Source Periods Table (For expectations TTM details G3/G4) */}
+                        {/* Source Periods Table (For expectations TTM details G3/G4 or general source periods) */}
                         {hasSourcePeriods && (
                           <div className="mt-3">
                             <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
                               <Layers className="w-3.5 h-3.5 text-zinc-600" />
-                              Period Values breakdown (TTM Calculation)
+                              Period Values / Parameters breakdown
                             </span>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {subData.sourcePeriods.map((sp, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-2 rounded-lg border border-zinc-900/80 bg-zinc-950/20 text-xs">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-mono text-zinc-400">Q{sp.fiscalQuarter} {sp.fiscalYear}</span>
-                                    <span className={`text-[9px] font-bold px-1.5 py-0.25 rounded uppercase ${sp.source === 'actual' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/5' : 'bg-amber-500/10 text-amber-400 border border-amber-500/5'}`}>
-                                      {sp.source}
-                                    </span>
+                              {subData.sourcePeriods.map((sp, idx) => {
+                                if (typeof sp === 'string') {
+                                  return (
+                                    <div key={idx} className="flex items-center justify-between p-2 rounded-lg border border-zinc-900/80 bg-zinc-950/20 text-xs">
+                                      <span className="font-mono text-zinc-400">{sp}</span>
+                                    </div>
+                                  )
+                                }
+                                return (
+                                  <div key={idx} className="flex items-center justify-between p-2 rounded-lg border border-zinc-900/80 bg-zinc-950/20 text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono text-zinc-400">Q{sp.fiscalQuarter} {sp.fiscalYear}</span>
+                                      <span className={`text-[9px] font-bold px-1.5 py-0.25 rounded uppercase ${sp.source === 'actual' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/5' : 'bg-amber-500/10 text-amber-400 border border-amber-500/5'}`}>
+                                        {sp.source}
+                                      </span>
+                                    </div>
+                                    <div className="font-mono font-semibold text-zinc-200 text-[11px]">
+                                      {isNaN(Number(sp.value)) ? sp.value : Number(sp.value).toLocaleString('id-ID')}
+                                    </div>
                                   </div>
-                                  <div className="font-mono font-semibold text-zinc-200 text-[11px]">
-                                    {isNaN(Number(sp.value)) ? sp.value : Number(sp.value).toLocaleString('id-ID')}
-                                  </div>
-                                </div>
-                              ))}
+                                )
+                              })}
                             </div>
                           </div>
                         )}

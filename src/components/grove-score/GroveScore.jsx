@@ -264,7 +264,8 @@ export default function GroveScore() {
               <thead className="bg-[#09090b] border-b border-zinc-900">
                 <tr>
                   <th className="px-5 py-4 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider w-[5%]">#</th>
-                  <th className="px-5 py-4 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider w-[35%]">SAHAM</th>
+                  <th className="px-5 py-4 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider w-[25%]">SAHAM</th>
+                  <th className="px-5 py-4 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider w-[12%]">PRICE</th>
                   <th className="px-4 py-4 text-center text-[11px] font-semibold text-[#5cb38d] uppercase tracking-wider w-[8%]">G</th>
                   <th className="px-4 py-4 text-center text-[11px] font-semibold text-[#5cb38d] uppercase tracking-wider w-[8%]">R</th>
                   <th className="px-4 py-4 text-center text-[11px] font-semibold text-[#5cb38d] uppercase tracking-wider w-[8%]">O</th>
@@ -315,6 +316,33 @@ export default function GroveScore() {
                           </div>
                         </td>
 
+                        <td className="px-5 py-4">
+                          {emiten.latestPrice ? (
+                            <div className="flex flex-col items-start gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-bold text-zinc-100 text-[13px]">
+                                  Rp{Number(emiten.latestPrice.latestClose).toLocaleString('id-ID')}
+                                </span>
+                                <span className={`font-mono text-[10px] font-medium px-1.5 py-0.25 rounded ${
+                                  emiten.latestPrice.direction === 'UP'
+                                    ? 'text-emerald-400 bg-emerald-500/5 border border-emerald-500/10'
+                                    : emiten.latestPrice.direction === 'DOWN'
+                                    ? 'text-rose-400 bg-rose-500/5 border border-rose-500/10'
+                                    : 'text-zinc-400 bg-zinc-500/5 border border-zinc-500/10'
+                                }`}>
+                                  {emiten.latestPrice.direction === 'UP' ? '+' : ''}
+                                  {Number(emiten.latestPrice.changePct).toFixed(2)}%
+                                </span>
+                              </div>
+                              <span className="text-[9px] text-zinc-500 font-mono">
+                                {new Date(emiten.latestPrice.latestDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-zinc-600 font-mono text-xs">-</span>
+                          )}
+                        </td>
+
                         {['g', 'r', 'o', 'v', 'e'].map((key) => {
                           const val = emiten[key]
                           const displayVal = val === null || val === undefined ? '-' : val
@@ -327,7 +355,8 @@ export default function GroveScore() {
                                   symbol: emiten.symbol,
                                   companyLogoUrl: emiten.companyLogoUrl,
                                   metric: key.toUpperCase(),
-                                  data: emiten.scoreBreakdown?.[key]
+                                  data: emiten.scoreBreakdown?.[key],
+                                  latestPrice: emiten.latestPrice
                                 })}
                                 className="group/score mx-auto flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-zinc-800/50 border border-transparent hover:border-zinc-800/80 transition-all duration-200 focus:outline-none"
                               >
@@ -360,7 +389,7 @@ export default function GroveScore() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={9} className="px-5 py-12 text-center text-zinc-600 font-mono text-xs">
+                    <td colSpan={10} className="px-5 py-12 text-center text-zinc-600 font-mono text-xs">
                       Tidak ada emiten yang cocok dengan filter.
                     </td>
                   </tr>
@@ -395,6 +424,7 @@ export default function GroveScore() {
           companyLogoUrl={selectedBreakdown.companyLogoUrl}
           metric={selectedBreakdown.metric}
           data={selectedBreakdown.data}
+          latestPrice={selectedBreakdown.latestPrice}
           onClose={() => setSelectedBreakdown(null)}
         />
       )}
