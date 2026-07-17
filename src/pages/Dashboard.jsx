@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import {
-  Building2, List, TrendingUp, Wallet, DollarSign, BarChart3, LogOut, Menu, X, Code2, FileJson, Sparkles, FolderTree, FileText, Landmark
+  Building2, List, TrendingUp, Wallet, DollarSign, BarChart3, LogOut, Menu, X, Code2, FileJson, Sparkles, FolderTree, FileText, Landmark, CalendarDays
 } from 'lucide-react'
 import Toast from '@/components/dashboard/Toast'
 import { useFormStore } from '@/store/useFormStore'
@@ -28,6 +28,7 @@ import { GroveLogo } from '@/components/ui/GroveLogo'
 import IndustrySectorPage from '../components/industry-sector/IndustrySectorPage'
 import FinancialStatementPage from '../components/financial-statement/FinancialStatementPage'
 import CompanyListingPage from '../components/company-listing/CompanyListingPage'
+import CorporateActionPage from '../components/corporate-action/CorporateActionPage'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -62,6 +63,7 @@ export default function Dashboard() {
     { path: '/dashboard/companies-listings', label: 'Company & Listing', icon: Landmark },
     { path: '/dashboard/industries-sectors', label: 'Industry & Sector', icon: FolderTree },
     { path: '/dashboard/financial-statements', label: 'Financial Statement', icon: FileText },
+    { path: '/dashboard/corporate-actions', label: 'Corporate Action', icon: CalendarDays },
     { path: '/dashboard/json-editor', label: 'JSON Editor', icon: FileJson }
   ]
 
@@ -170,6 +172,10 @@ export default function Dashboard() {
 
                 {/* Modul Financial Statement */}
                 <Route path="/financial-statements" element={<FinancialStatementPage />} />
+
+                {/* Modul Corporate Action */}
+                <Route path="/corporate-actions" element={<CorporateActionPage />} />
+                <Route path="/corporate-action" element={<Navigate to="/dashboard/corporate-actions" replace />} />
                 
                 {/* Modul Income Statement compatibility redirects & forms */}
                 <Route path="/income-statements" element={<Navigate to="/dashboard/financial-statements?tab=income-statement" replace />} />

@@ -28,7 +28,7 @@ export default function GroveFormulaDetail({ id, onClose }) {
   }, [data?.rules])
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
+    <div className="fixed inset-0 z-50 -top-[2rem] flex justify-end animate-fade-in">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative w-full max-w-[760px] h-full bg-[#09090b] border-l border-zinc-900 flex flex-col shadow-2xl text-sm text-zinc-300">
